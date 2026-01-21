@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" sizes="180x180" href="/favicons/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicons/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicons/favicon-16x16.png">
+    <meta name="theme-color" content="#05060b">
+    <link rel="manifest" href="/manifest.json">
+    <script src="/js/pwa-register.js" defer></script>
+    <title>Terms of Service - Mana Mingle</title>
+   
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+Tamma+2&display=swap" rel="stylesheet">
+    <style>
+        :root {
+          --bg: #05060b;
+          --glass-surface: rgba(255, 255, 255, 0.03);
+          --glass-border: rgba(255, 255, 255, 0.08);
+          --glass-highlight: rgba(255, 255, 255, 0.15);
+          --text: #e8ecf2;
+          --muted: #b8c2cc;
+          --blue: #00c6ff;
+          --orange: #ff9f43;
+          --red: #ff4757;
+          --blur: 20px;
+        }
+        
+        * { box-sizing: border-box; }
+        
+        html { scroll-behavior: smooth; }
+        
+        body {
+          font-family: 'Baloo Tamma 2', cursive;
+          background-color: var(--bg);
+          background-image: 
+            radial-gradient(circle at 10% 20%, rgba(0, 198, 255, 0.15), transparent 40%),
+            radial-gradient(circle at 90% 80%, rgba(255, 159, 67, 0.15), transparent 40%),
+            radial-gradient(circle at 50% 50%, rgba(100, 100, 255, 0.05), transparent 60%);
+          background-attachment: fixed;
+          color: var(--text);
+          margin: 0;
+          padding: 24px;
+          padding-top: max(24px, env(safe-area-inset-top));
+          padding-bottom: max(24px, env(safe-area-inset-bottom));
+          padding-left: max(24px, env(safe-area-inset-left));
+          padding-right: max(24px, env(safe-area-inset-right));
+          min-height: 100vh;
+          overflow-x: hidden;
+        }
+
+        /* Floating background elements for depth */
+        body::before {
+          content: '';
+          position: fixed;
+          top: -20%; left: -10%;
+          width: 60vw; height: 60vw;
+          background: radial-gradient(circle, rgba(0, 198, 255, 0.1), transparent 70%);
+          border-radius: 50%;
+          z-index: -1;
+          animation: float 20s infinite alternate;
+        }
+
+        body::after {
+          content: '';
+          position: fixed;
+          bottom: -20%; right: -10%;
+          width: 50vw; height: 50vw;
+          background: radial-gradient(circle, rgba(255, 159, 67, 0.08), transparent 70%);
+          border-radius: 50%;
+          z-index: -1;
+          animation: float 25s infinite alternate-reverse;
+        }
+
+        @keyframes float {
+          0% { transform: translate(0, 0); }
+          100% { transform: translate(50px, 50px); }
+        }
+        
+        .container {
+          max-width: 850px;
+          margin: auto;
+          position: relative;
+          z-index: 1;
+        }
+        
+        .header, .section {
+          background: var(--glass-surface);
+          backdrop-filter: blur(var(--blur));
+          -webkit-backdrop-filter: blur(var(--blur));
+          border: 1px solid var(--glass-border);
+          box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+          border-radius: 24px;
+          padding: 30px;
+          margin-bottom: 24px;
+          transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+        }
+
+        .header {
+          text-align: center;
+          background: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.01));
+          border-bottom: 1px solid var(--glass-highlight);
+        }
+
+        .section:hover {
+          transform: translateY(-5px);
+          box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+          border-color: var(--glass-highlight);
+          background: rgba(255, 255, 255, 0.05);
+        }
+        
+        h1 {
+          margin: 0;
+          font-size: 3rem;
+          background: linear-gradient(to right, #fff, #00c6ff);
+          -webkit-background-clip: text;
+          background-clip: text;
+          -webkit-text-fill-color: transparent;
+          filter: drop-shadow(0 0 20px rgba(0, 198, 255, 0.3));
+        }
+        
+        .last-updated {
+          color: var(--muted);
+          font-size: 1rem;
+          margin-top: 10px;
+          letter-spacing: 1px;
+        }
+        
+        h2 {
+          color: var(--blue);
+          margin-top: 0;
+          font-size: 1.8rem;
+          text-shadow: 0 0 10px rgba(0, 198, 255, 0.2);
+        }
+        
+        .warning {
+          background: rgba(255, 165, 0, 0.05);
+          border-left: 4px solid var(--orange);
+        }
+        
+        .prohibited-list {
+          background: rgba(255, 71, 87, 0.05);
+          border-left: 4px solid var(--red);
+        }
+        
+        .back-link {
+          display: block;
+          width: max-content;
+          margin: 40px auto 0;
+          padding: 16px 40px;
+          border-radius: 50px;
+          background: rgba(255, 255, 255, 0.05);
+          backdrop-filter: blur(10px);
+          border: 1px solid var(--glass-border);
+          color: white;
+          font-size: 1.1rem;
+          font-weight: bold;
+          text-decoration: none;
+          transition: all 0.3s ease;
+          box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+          text-align: center;
+        }
+        
+        .back-link:hover {
+          transform: translateY(-3px);
+          background: rgba(255, 255, 255, 0.1);
+          box-shadow: 0 10px 30px rgba(0, 198, 255, 0.3);
+          border-color: var(--blue);
+        }
+
+        .reveal {
+          opacity: 0;
+          transform: translateY(30px);
+          transition: all 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+        
+        .reveal.show {
+          opacity: 1;
+          transform: translateY(0);
+        }
+
+        /* Glass scrollbar */
+        ::-webkit-scrollbar {
+          width: 10px;
+        }
+        ::-webkit-scrollbar-track {
+          background: rgba(0, 0, 0, 0.2);
+        }
+        ::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.1);
+          border-radius: 5px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+          background: rgba(255, 255, 255, 0.2);
+        }
+
+        @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+    </style>
+     <!-- Standard favicon -->
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon/favicon-16x16.png">
+
+<!-- Apple devices -->
+<link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png">
+
+<!-- Android / PWA -->
+<link rel="manifest" href="/favicon/site.webmanifest">
+
+
+<!-- Fallback -->
+<link rel="shortcut icon" href="/favicon/favicon.ico">
+<script src="/js/ad-manager.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="header reveal">
+          <h1>Terms of Service</h1>
+          <p class="last-updated">Last Updated: October 26, 2024</p>
+        </div>
+        
+        <div class="section reveal warning">
+            <strong>⚠️ IMPORTANT:</strong> By using Mana Mingle, you confirm you are <strong>18 years or older</strong>.
+        </div>
+        
+        <div class="section reveal">
+          <h2>1. Acceptance of Terms</h2>
+          <p>By accessing Mana Mingle, you agree to these Terms of Service.</p>
+        </div>
+        
+        <div class="section reveal">
+        <h2>2. Prohibited Activities</h2>
+        <div class="prohibited-list">
+            <p><strong>You must NOT:</strong></p>
+            <ul>
+                <li>Harass, bully, or threaten others</li>
+                <li>Share explicit or adult content</li>
+                <li>Share personal information</li>
+                <li>Use automated bots or scripts</li>
+                <li>Impersonate others</li>
+                <li>Engage in illegal activities</li>
+            </ul>
+        </div>
+        </div>
+        
+        <div class="section reveal">
+          <h2>3. Age Restriction</h2>
+          <p>You must be <strong>18+ years old</strong> to use this service.</p>
+        </div>
+        
+        <div class="section reveal">
+          <h2>4. Termination</h2>
+          <p>We may terminate access for violations of these terms.</p>
+        </div>
+        
+        <div class="section reveal">
+          <h2>5. Limitation of Liability</h2>
+          <p>Mana Mingle is provided "as is". We are not liable for user interactions.</p>
+        </div>
+        
+        <div class="section reveal">
+          <h2>6. Contact</h2>
+          <p>Report violations: <a href="report.html" style="color: var(--orange);">Abuse Report Form</a></p>
+        </div>
+        
+        <a href="index.html" class="back-link reveal">← Back to Chat</a>
+    </div>
+<script>
+const observer = new IntersectionObserver(entries=>{
+  entries.forEach(entry=>{
+    if(entry.isIntersecting){
+      entry.target.classList.add("show");
+      observer.unobserve(entry.target);
+    }
+  });
+},{threshold:0.15});
+document.querySelectorAll(".reveal").forEach(el=>observer.observe(el));
+</script>
+</body>
+</html>

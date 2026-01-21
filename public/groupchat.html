@@ -1,0 +1,5653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ManaMingle – Group Chat</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#04060a">
+<link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon/favicon-16x16.png">
+<!-- manifest/pwa disabled for local dev -->
+
+<link href="https://fonts.googleapis.com/css2?family=Baloo+Tamma+2:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- AI Moderation Scripts -->
+  <script>
+    (function(){
+      const w = console.warn, l = console.log, i = console.info;
+      const patterns = [
+        /tensorflow|tf(\.min)?\.js|nsfwjs/i,
+        /kernel .*already registered/i,
+        /backend .*already registered/i,
+        /Platform .*already been set/i,
+        /already been set/i,
+        /Reusing existing backend factory/i
+      ];
+      const match = (...args) => {
+        const text = args.map(a => {
+          if (typeof a === 'string') return a;
+          if (a && typeof a.message === 'string') return a.message;
+          try { return String(a); } catch { return ''; }
+        }).join(' ');
+        return patterns.some(p => p.test(text));
+      };
+      console.warn = (...args) => { if (match(...args)) return; w(...args); };
+      console.log  = (...args) => { if (match(...args)) return; l(...args); };
+      console.info = (...args) => { if (match(...args)) return; i(...args); };
+    })();
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/nsfwjs@latest/dist/nsfwjs.min.js"></script>
+  
+  <!-- Ad Manager -->
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <!-- ad manager disabled for local dev -->
+
+  <style>
+:root{
+  --bg:#000000;
+  --accent:#00c6ff;
+  --green:#00d19a;
+  --danger:#ff7675;
+  --orange:#ff9f43;
+  --coin:#ffd700;
+  
+  /* Video Chat Styles Variables */
+  --primary: #FFD700;
+  --primary-glow: rgba(255, 215, 0, 0.5);
+  --secondary: #00f2ff;
+  --secondary-glow: rgba(0, 242, 255, 0.5);
+
+  /* Glass Theme Variables */
+  --glass-bg: rgba(255, 255, 255, 0.03);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-highlight: rgba(255, 255, 255, 0.15);
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+  --glass-blur: blur(20px);
+  --text-main: rgba(255, 255, 255, 0.9);
+  --text-muted: rgba(255, 255, 255, 0.6);
+}
+
+/* iOS Input Zoom Fix */
+@media screen and (-webkit-min-device-pixel-ratio: 0) {
+  select, textarea, input {
+    font-size: 16px !important;
+  }
+}
+
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+
+body{
+  font-family:'Baloo Tamma 2',cursive;
+  background: radial-gradient(circle at 50% 50%, #1a1a1a 0%, #000000 100%);
+  color:var(--text-main);
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:0;
+  overflow:hidden;
+  position:relative;
+}
+
+.background-animation{
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  z-index:0;
+  background: linear-gradient(135deg, rgba(0,198,255,0.06), rgba(0,209,154,0.06));
+  background-size: 300% 300%;
+  animation: gradientShift 20s ease-in-out infinite alternate;
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 100% 50%; }
+}
+
+/* Liquid Glass Background Elements */
+.background-animation::before {
+  content: '';
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(0, 198, 255, 0.15), transparent 60%);
+  top: -200px;
+  left: -200px;
+  border-radius: 50%;
+  filter: blur(80px);
+  animation: floatOrb 20s infinite alternate;
+}
+
+.background-animation::after {
+  content: '';
+  position: absolute;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(0, 209, 154, 0.1), transparent 60%);
+  bottom: -100px;
+  right: -100px;
+  border-radius: 50%;
+  filter: blur(60px);
+  animation: floatOrb 15s infinite alternate-reverse;
+}
+
+@keyframes floatOrb {
+  0% { transform: translate(0, 0); }
+  100% { transform: translate(50px, 50px); }
+}
+
+@keyframes border-flow { 0% { background-position: 0% 50%; } 100% { background-position: 400% 50%; } }
+
+/* ===== START CARD (LIQUID GLASS) ===== */
+.start-card{
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 24px;
+  padding: 40px 30px;
+  width: 100%;
+  max-width: 360px;
+  text-align: center;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.1);
+  animation: popIn .6s cubic-bezier(0.2, 0.8, 0.2, 1);
+  border: 1px solid rgba(255,255,255,0.1);
+  position: relative;
+  z-index: 2;
+}
+
+.start-overlay{
+  position:fixed;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:1;
+  animation: fadeOverlay 0.6s ease;
+}
+
+@keyframes fadeOverlay { from { opacity:0; } to { opacity:1; } }
+
+.start-card::before{
+  content:"";
+  position:absolute;
+  inset:-2px;
+  border-radius:24px;
+  padding:2px;
+  background: linear-gradient(135deg, rgba(0,198,255,0.4), rgba(0,209,154,0.4));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: glowBorder 3s ease-in-out infinite;
+}
+
+@keyframes glowBorder { 0%,100% { opacity:0.4; } 50% { opacity:1; } }
+
+.start-card:hover{ transform: translateY(-4px) scale(1.02); }
+
+.start-card h1{ animation: shimmer 5s linear infinite; background-size: 200% 100%; }
+
+@keyframes shimmer { 0% { background-position: 0% 0; } 100% { background-position: 200% 0; } }
+
+.start-card h1{
+  margin-bottom: 25px;
+  font-size: 2rem;
+  background: linear-gradient(135deg, #fff 0%, #aaa 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 10px 20px rgba(0,0,0,0.2);
+}
+
+/* LIQUID BUTTONS */
+.start-card button, button {
+  background: rgba(255, 255, 255, 0.05) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2), inset 0 0 20px rgba(255,255,255,0.02) !important;
+  color: white !important;
+  border-radius: 16px !important;
+  padding: 16px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.5px !important;
+  transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+  position: relative;
+  overflow: hidden;
+}
+
+button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+  transition: 0.5s;
+}
+
+button:hover::before {
+  left: 100%;
+}
+
+button:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 25px rgba(0, 198, 255, 0.2), inset 0 0 0 1px rgba(255,255,255,0.2) !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+  text-shadow: 0 0 8px rgba(255,255,255,0.5);
+}
+
+button:active {
+  transform: scale(0.98) translateY(0) !important;
+}
+
+.home-btn {
+  background: rgba(255,255,255,0.03) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  margin-top: 20px;
+}
+
+/* Nickname Input */
+.nickname-input {
+  width: 100%;
+  padding: 14px 16px;
+  margin: 20px 0 15px;
+  border-radius: 16px;
+  border: 1px solid var(--glass-border);
+  background: rgba(255,255,255,0.05);
+  color: white;
+  font-size: 1rem;
+  font-family: 'Baloo Tamma 2', cursive;
+  outline: none;
+  min-height: 50px;
+  backdrop-filter: blur(10px);
+  display: none;
+  box-shadow: inset 0 2px 10px rgba(0,0,0,0.2);
+  transition: all 0.3s ease;
+}
+
+.nickname-input:focus {
+  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(255,255,255,0.08);
+  box-shadow: 0 0 0 4px rgba(255,255,255,0.05);
+}
+
+@keyframes popIn{
+  from{opacity:0;transform:scale(.9) translateY(20px);}
+  to{opacity:1;transform:scale(1) translateY(0);}
+}
+@keyframes fadeIn{
+  from{opacity:0}
+  to{opacity:1}
+}
+
+/* ===== MAIN APP CONTAINER ===== */
+.app{
+  width:100%;
+  height:100vh;
+  background:transparent;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  display:none;
+  position:relative;
+  z-index:2;
+}
+
+/* ===== HEADER ===== */
+.header{
+  padding:8px 16px;
+  padding-top: max(12px, env(safe-area-inset-top));
+  padding-left: max(20px, env(safe-area-inset-left));
+  padding-right: max(20px, env(safe-area-inset-right));
+  display:flex;
+  flex-wrap: nowrap;
+  justify-content:space-between;
+  align-items:center;
+  gap:8px;
+  overflow-x:auto;
+  -webkit-overflow-scrolling: touch;
+  border-bottom:1px solid var(--glass-border);
+  background: var(--glass-bg);
+  flex-shrink:0;
+  min-height:56px;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  position: relative;
+  z-index: 100;
+  box-shadow: 0 4px 30px rgba(0,0,0,0.1);
+}
+
+.header h1{
+  font-size:1.1rem;
+  background: linear-gradient(135deg, #fff 0%, #ddd 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  font-weight: 700;
+  margin-right: 10px;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Header right area: align items horizontally */
+.header-right{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:10px;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  margin-left:auto;
+}
+
+.header-right .coin-display{ margin-right: 0; }
+.header-right .header-home-btn{ display:flex; align-items:center; justify-content:center; }
+
+/* Global online badge */
+.online-badge {
+  font-family: 'Baloo Tamma 2', cursive;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--glass-border);
+  color: var(--green);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95rem;
+  letter-spacing: 0.5px;
+}
+
+.online-dot {
+  width: 8px;
+  height: 8px;
+  background: var(--green);
+  border-radius: 50%;
+  box-shadow: 0 0 8px var(--green);
+}
+
+/* Coin display in header */
+.coin-display {
+  background: rgba(255, 215, 0, 0.05);
+  border: 1px solid rgba(255, 215, 0, 0.2);
+  color: #ffd700;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: bold;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 15px rgba(255, 215, 0, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: 10px;
+  z-index: 10;
+}
+
+/* ===== INVITE BAR ===== */
+.invite-bar{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  justify-content:flex-end;
+  position: relative;
+  z-index: 10;
+  flex-wrap: nowrap;
+}
+
+.invite-link-display {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 6px 10px;
+  border-radius: 12px;
+  color: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  font-size: 0.75rem;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: none;
+}
+
+.invite-bar button {
+  min-height: 44px;
+  min-width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+}
+
+/* ===== BACK BUTTON ===== */
+.back-btn{
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color:white;
+  padding:10px 14px;
+  border-radius:10px;
+  cursor:pointer;
+  font-size:0.8rem;
+  font-family:'Baloo Tamma 2',cursive;
+  transition:all 0.2s ease;
+  display:flex;
+  align-items:center;
+  gap:4px;
+  flex-shrink:0;
+  min-height:44px;
+  min-width:44px;
+  backdrop-filter: blur(5px);
+}
+
+.back-btn:active{
+  transform: scale(0.95);
+}
+
+/* ===== TEXT CHAT ===== */
+.text-chat{
+  display:none;
+  flex:1;
+  flex-direction:column;
+  min-height:0;
+}
+
+.chat-messages{
+  flex:1;
+  padding:20px;
+  overflow-y:auto;
+  overflow-x:hidden;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  -webkit-overflow-scrolling:touch;
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0));
+}
+
+.msg{
+  max-width:85%;
+  padding:14px 18px;
+  border-radius:18px;
+  word-wrap:break-word;
+  line-height:1.5;
+  animation:fadeIn 0.3s ease;
+  position:relative;
+  font-size:0.95rem;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.05);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.me{
+  background: rgba(0, 198, 255, 0.1);
+  border: 1px solid rgba(0, 198, 255, 0.2);
+  align-self:flex-end;
+  margin-left:auto;
+  border-bottom-right-radius: 4px;
+}
+
+.other{
+  background: rgba(255, 255, 255, 0.05);
+  align-self:flex-start;
+  border-bottom-left-radius: 4px;
+}
+
+.system-msg {
+  align-self: center;
+  background: rgba(255, 159, 67, 0.1);
+  border: 1px solid rgba(255, 159, 67, 0.2);
+  color: var(--orange);
+  font-size: 0.9rem;
+  text-align: center;
+  max-width: 90%;
+  padding: 10px 20px;
+  border-radius: 20px;
+  backdrop-filter: blur(5px);
+}
+
+.typing-indicator {
+  align-self: flex-start;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: var(--accent);
+  padding: 10px 16px;
+  border-radius: 16px;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  backdrop-filter: blur(5px);
+  margin-left: 10px;
+}
+
+.typing-dots {
+  display: flex;
+  gap: 3px;
+}
+
+.typing-dots span {
+  width: 6px;
+  height: 6px;
+  background: var(--accent);
+  border-radius: 50%;
+  animation: typing 1.4s infinite;
+}
+
+.typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+.typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes typing {
+  0%, 60%, 100% { opacity: 0.4; transform: translateY(0); }
+  30% { opacity: 1; transform: translateY(-3px); }
+}
+
+.controls-area{
+  display:flex;
+  gap:12px;
+  padding:16px 20px;
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+  padding-left: max(20px, env(safe-area-inset-left));
+  padding-right: max(20px, env(safe-area-inset-right));
+  border-top:1px solid var(--glass-border);
+  background: var(--glass-bg);
+  flex-shrink:0;
+  align-items:center;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 -4px 30px rgba(0,0,0,0.1);
+}
+
+.input-container {
+  flex: 1;
+  position: relative;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  transition: all 0.3s ease;
+}
+
+.input-container:focus-within {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--accent);
+  box-shadow: 0 0 20px rgba(0, 198, 255, 0.15);
+  transform: translateY(-1px);
+}
+
+.chat-input{
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: #fff;
+  padding: 0 16px;
+  height: 54px;
+  font-size: 1rem;
+  font-family: 'Baloo Tamma 2', cursive;
+  width: 100%;
+  resize: none;
+  padding-top: 14px;
+}
+
+.action-btn {
+  width: 50px;
+  height: 50px;
+  border-radius: 14px;
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+}
+
+.action-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateY(-2px);
+}
+
+.send-btn {
+  width: 60px;
+  height: 60px;
+  background: transparent;
+  border: none;
+  color: rgba(255,255,255,0.7);
+  cursor: pointer;
+  font-size: 1.3rem;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.send-btn:hover {
+  color: var(--accent);
+  transform: scale(1.15) rotate(-10deg);
+  text-shadow: 0 0 10px var(--secondary-glow);
+}
+
+@media (max-width: 768px) {
+  .controls-area { 
+    padding: 10px;
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
+    padding-left: max(10px, env(safe-area-inset-left));
+    padding-right: max(10px, env(safe-area-inset-right));
+    gap: 10px;
+  }
+  .chat-messages { 
+    padding: 16px;
+    gap: 12px;
+  }
+}
+
+/* Media upload button */
+.media-upload-btn {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  min-width: 50px;
+  min-height: 50px;
+  color: white;
+  padding: 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(5px);
+}
+
+/* Media preview */
+.media-preview {
+  display: none;
+  margin: 10px 0;
+  padding: 15px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 16px;
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(10px);
+}
+
+.preview-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.preview-media {
+  max-width: 100px;
+  max-height: 100px;
+  border-radius: 12px;
+  object-fit: cover;
+  border: 1px solid var(--glass-border);
+}
+
+.preview-info {
+  flex: 1;
+}
+
+.remove-preview {
+  background: var(--danger);
+  border: none;
+  color: white;
+  padding: 5px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* Media message */
+.media-message {
+  display: inline-block;
+  margin-top: 5px;
+}
+
+.media-message img, .media-message video {
+  max-width: 200px;
+  max-height: 200px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+.media-message img:hover, .media-message video:hover {
+  transform: scale(1.02);
+}
+
+/* ===== VIDEO CHAT ===== */
+.video-chat{
+  display:none;
+  flex:1;
+  flex-direction:column;
+  min-height:0;
+  background: transparent;
+  overflow-y: auto;
+}
+
+/* Video Grid - Fixed 4-panel layout */
+.video-grid{
+  flex:1;
+  padding:20px;
+  display:grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: 1fr;
+  align-items: stretch;
+  gap:16px;
+  min-height:0;
+  min-width:0;
+  position:relative;
+  background: transparent;
+  box-sizing: border-box;
+  width:100%;
+  height:100%;
+}
+
+/* Video Card - Always 4 panels */
+.video-card {
+  position: relative;
+  width: 100%;
+  height: auto;
+  background: #000;
+  border-radius: 20px;
+  overflow: hidden;
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  aspect-ratio: 16/9;
+  will-change: transform, box-shadow;
+  animation: panelPopIn 380ms ease both;
+}
+
+.video-card:hover {
+  transform: translateY(-4px) scale(1.02);
+  border-color: var(--secondary);
+  box-shadow: 0 0 24px var(--secondary-glow);
+}
+
+/* Animated Border Effect */
+.video-card::before {
+  content: '';
+  position: absolute;
+  top: -2px; left: -2px; right: -2px; bottom: -2px;
+  background: linear-gradient(45deg, var(--primary), transparent, var(--secondary), transparent);
+  z-index: -1;
+  background-size: 400%;
+  animation: border-flow 10s linear infinite;
+  opacity: 0;
+  transition: opacity 0.3s;
+  border-radius: 22px;
+  pointer-events: none;
+}
+
+.video-card.speaking::before,
+.video-card:hover::before {
+  opacity: 1;
+}
+
+.video-card.speaking {
+  border-color: var(--secondary);
+  box-shadow: 0 0 20px var(--secondary-glow);
+  animation: pulseGlow 1600ms ease-in-out infinite;
+}
+
+.video-card:active {
+  transform: scale(0.98);
+}
+
+.video-container {
+  width:100%;
+  height:100%;
+  position:relative;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.video-card video{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  background:#000;
+  opacity:0;
+  animation: videoFadeIn 350ms ease forwards;
+  display:block;
+  transform: scaleX(1);
+  position:absolute;
+  top:0;
+  left:0;
+  right:0;
+  bottom:0;
+  border-radius: 24px;
+}
+
+.video-card.me video{
+  transform: scaleX(-1);
+}
+
+@media (max-width: 768px) {
+  .video-card {
+    aspect-ratio: 16/9;
+  }
+  .video-grid{
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Mobile portrait: 2x2 grid, balanced panels */
+@media (max-width: 600px) {
+  .video-grid {
+    grid-template-columns: repeat(2, 1fr);
+    padding: 10px;
+    gap: 10px;
+    height: auto;
+  }
+  .video-card {
+    aspect-ratio: 16/9;
+  }
+  .video-placeholder .anon-logo {
+    width: 100px;
+    height: 100px;
+  }
+}
+
+/* Video placeholder */
+.video-placeholder {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.02);
+  color: rgba(255,255,255,0.4);
+  font-size: 1rem;
+  z-index: 1;
+  backdrop-filter: blur(20px);
+  transition: opacity 240ms ease;
+}
+
+.video-placeholder i {
+  font-size: 3rem;
+  margin-bottom: 15px;
+  color: var(--accent);
+  opacity: 0.3;
+  filter: drop-shadow(0 0 10px var(--accent));
+}
+
+.video-placeholder .anon-logo {
+  width: 140px;
+  height: 140px;
+  border-radius: 20px;
+  margin-bottom: 12px;
+  object-fit: cover;
+  box-shadow: 0 0 18px rgba(0, 102, 204, 0.35);
+}
+
+/* OPO Emojis */
+.opo-emoji {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 3rem;
+  z-index: 20;
+  pointer-events: none;
+  animation: emojiFloat 2s ease-in-out forwards;
+}
+
+@keyframes emojiFloat {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.5);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(-50%, -100%) scale(1.2);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -200%) scale(0.8);
+  }
+}
+
+/* Special Emojis */
+.special-emoji {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 4rem;
+  z-index: 25;
+  pointer-events: none;
+  animation: specialEmojiFloat 2.5s ease-in-out forwards;
+  filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.5));
+}
+
+@keyframes specialEmojiFloat {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.3);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(-50%, -120%) scale(1.5) rotate(-10deg);
+  }
+  40% {
+    transform: translate(-50%, -150%) scale(1.3) rotate(10deg);
+  }
+  60% {
+    transform: translate(-50%, -180%) scale(1.2) rotate(-5deg);
+  }
+  80% {
+    opacity: 1;
+    transform: translate(-50%, -200%) scale(1.1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -250%) scale(0.8);
+  }
+}
+
+/* Speaking indicator */
+.video-card.speaking{
+  box-shadow: 0 0 30px rgba(0,209,154,0.3);
+  border-color: rgba(0,209,154,0.5);
+}
+
+/* Watermark - Matches Video Chat */
+.panel-watermark {
+  position: absolute;
+  bottom: 15px;
+  right: 15px;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--primary);
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  text-shadow: 0 0 10px rgba(255, 215, 0, 0.4);
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0.8;
+  transition: opacity 0.3s;
+}
+
+.video-card:hover .panel-watermark {
+  opacity: 1;
+}
+
+.watermark-logo { display: none; }
+
+.watermark-logo img { display: none; }
+
+/* Video panel coins */
+.video-coins {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  background: rgba(0,0,0,0.3);
+  color: var(--coin);
+  padding: 6px 12px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: bold;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,215,0,0.2);
+}
+
+/* Video label - Matches Video Chat */
+.video-label {
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  padding: 6px 14px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Badge system */
+.user-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: bold;
+  margin-left: 6px;
+  text-transform: uppercase;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.badge-creator { background: var(--creator); color: white; }
+.badge-admin { background: var(--admin); color: white; }
+.badge-manager { background: var(--manager); color: white; }
+.badge-supporter { background: var(--supporter); color: white; }
+.badge-vip { background: var(--vip); color: black; }
+
+/* Report/Block Buttons */
+.panel-actions {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 20;
+}
+
+.report-btn, .block-btn {
+  background: rgba(255, 118, 117, 0.2) !important;
+  border: 1px solid rgba(255, 118, 117, 0.3) !important;
+  color: #ff7675 !important;
+  backdrop-filter: blur(5px) !important;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1) !important;
+  padding: 8px 12px !important;
+  font-size: 0.8rem !important;
+  border-radius: 12px !important;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.3s ease !important;
+  min-height: auto !important;
+  width: auto !important;
+}
+
+.report-btn:hover, .block-btn:hover {
+  background: rgba(255, 118, 117, 0.4) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(255, 118, 117, 0.2) !important;
+}
+
+.block-btn {
+  background: rgba(0,0,0,0.4) !important;
+  border-color: rgba(255,255,255,0.2) !important;
+  color: rgba(255,255,255,0.8) !important;
+}
+
+.block-btn:hover {
+  background: rgba(255,255,255,0.1) !important;
+  color: white !important;
+}
+
+/* Recording indicator */
+.recording-indicator {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(231, 76, 60, 0.9);
+  color: white;
+  padding: 10px 15px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  backdrop-filter: blur(10px);
+  border: 2px solid #e74c3c;
+  box-shadow: 0 0 20px rgba(231, 76, 60, 0.5);
+}
+
+.recording-dot {
+  width: 10px;
+  height: 10px;
+  background: white;
+  border-radius: 50%;
+  animation: recordingPulse 1s infinite;
+}
+
+@keyframes recordingPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Record button - Only in video chat */
+.record-btn {
+  position: fixed;
+  bottom: 100px;
+  right: 20px;
+  background: rgba(231, 76, 60, 0.3);
+  border: 2px solid #e74c3c;
+  color: rgba(255,255,255,0.5);
+  padding: 12px 16px;
+  border-radius: 12px;
+  cursor: not-allowed;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+  display: none; /* Hidden by default, shown only in video chat */
+}
+
+.record-btn.enabled {
+  background: rgba(231, 76, 60, 0.8);
+  color: white;
+  cursor: pointer;
+  box-shadow: 0 0 20px rgba(231, 76, 60, 0.5);
+}
+
+.record-btn.enabled:hover {
+  background: rgba(231, 76, 60, 1);
+  transform: scale(1.05);
+}
+
+.record-btn.enabled:active {
+  transform: scale(0.95);
+}
+
+.record-btn.recording {
+  background: rgba(231, 76, 60, 0.9);
+  animation: recordingGlow 2s infinite;
+}
+
+@keyframes recordingGlow {
+  0%, 100% { box-shadow: 0 0 20px rgba(231, 76, 60, 0.5); }
+  50% { box-shadow: 0 0 30px rgba(231, 76, 60, 0.8); }
+}
+
+/* Video Controls - FLOATING - FIXED POSITION */
+.video-controls{
+  position:fixed;
+  bottom:30px;
+  left:50%;
+  transform:translateX(-50%);
+  display:flex;
+  gap:16px;
+  background: rgba(0,0,0,0.6);
+  padding:16px 24px;
+  border-radius: 24px;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  z-index:1000;
+  border:1px solid rgba(255,255,255,0.1);
+  box-shadow: 0 20px 50px rgba(0,0,0,0.4);
+}
+
+.ctrl-btn{
+  background: rgba(255,255,255,0.1) !important;
+  border:1px solid rgba(255,255,255,0.15) !important;
+  color:white;
+  padding:14px;
+  border-radius: 16px;
+  cursor:pointer;
+  font-size:1.2rem;
+  transition:all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  min-width:56px;
+  min-height:56px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.ctrl-select{
+  background: rgba(255,255,255,0.1);
+  border:1px solid rgba(255,255,255,0.15);
+  color:white;
+  padding:10px 12px;
+  border-radius: 14px;
+  outline:none;
+  font-size:0.9rem;
+}
+
+.ctrl-btn.translate{
+  background: linear-gradient(135deg, rgba(0,198,255,0.25), rgba(0,209,154,0.25)) !important;
+  border:1px solid rgba(0,198,255,0.5) !important;
+  box-shadow: 0 6px 18px rgba(0,198,255,0.25);
+  gap:8px;
+}
+
+.ctrl-btn.translate:hover{
+  background: linear-gradient(135deg, rgba(0,198,255,0.35), rgba(0,209,154,0.35)) !important;
+  box-shadow: 0 10px 24px rgba(0,198,255,0.35);
+}
+
+.ctrl-btn.translate.active{
+  background: linear-gradient(135deg, #00c6ff, #00d19a) !important;
+  border-color: rgba(255,255,255,0.7) !important;
+  color: white;
+  box-shadow: 0 0 25px rgba(0,209,154,0.6), 0 0 15px rgba(0,198,255,0.6);
+  animation: pulseGlow 1.8s infinite ease-in-out;
+}
+
+.ctrl-btn.translate .ctrl-label{
+  font-size: 0.9rem;
+  letter-spacing: 0.3px;
+}
+
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 20px rgba(0,209,154,0.4), 0 0 12px rgba(0,198,255,0.4); }
+  50% { box-shadow: 0 0 30px rgba(0,209,154,0.7), 0 0 18px rgba(0,198,255,0.7); }
+}
+
+.ctrl-btn:hover {
+  background: rgba(255,255,255,0.2) !important;
+  transform: translateY(-4px) scale(1.05);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+}
+
+.ctrl-btn:active{
+  background:rgba(255,255,255,0.2);
+  transform:scale(0.95);
+}
+
+.ctrl-btn.off{
+  background: rgba(255, 118, 117, 0.2) !important;
+  border-color: var(--danger) !important;
+  color: var(--danger);
+  box-shadow: inset 0 0 15px rgba(255, 118, 117, 0.2);
+}
+
+.video-header{
+  padding:12px 16px;
+  display:flex;
+  justify-content:center;
+  border-bottom:1px solid var(--glass-border);
+  background: var(--glass-bg);
+  flex-shrink:0;
+  min-height:60px;
+  align-items:center;
+  backdrop-filter: blur(10px);
+}
+
+/* ===== MODALS ===== */
+.modal{
+  position:fixed;
+  inset:0;
+  background: rgba(0,0,0,0.6);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:2000;
+  padding:20px;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  touch-action:manipulation;
+  animation: fadeIn 0.3s ease;
+}
+
+.modal-box{
+  background: rgba(20, 25, 40, 0.6);
+  padding:30px;
+  border-radius: 28px;
+  width:100%;
+  max-width:360px;
+  border:1px solid rgba(255,255,255,0.1);
+  box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+  animation:popIn 0.3s ease;
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+}
+
+.modal-box h3{
+  margin-bottom:16px;
+  font-size:1.3rem;
+  text-align:center;
+  background: linear-gradient(45deg, #00c6ff, #00d19a);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.modal-box input{
+  width:100%;
+  padding:14px 16px;
+  margin-top:8px;
+  border-radius:12px;
+  border:1px solid var(--border);
+  background:rgba(255,255,255,0.08);
+  color:white;
+  font-size:1rem;
+  font-family:'Baloo Tamma 2',cursive;
+  outline:none;
+  min-height:44px;
+  backdrop-filter: blur(5px);
+  font-size: 16px !important; /* Prevents zoom on iOS */
+}
+
+.modal-box input:focus{
+  border-color:var(--accent);
+  box-shadow:0 0 0 2px rgba(0,198,255,0.1);
+}
+
+.modal-box button{
+  width:100%;
+  margin-top:20px;
+  padding:14px;
+  border:none;
+  border-radius:12px;
+  background:var(--accent);
+  color:white;
+  cursor:pointer;
+  font-size:1rem;
+  font-family:'Baloo Tamma 2',cursive;
+  font-weight:600;
+  transition:transform 0.2s ease;
+  border:1px solid rgba(0,198,255,0.3);
+  min-height:44px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  backdrop-filter: blur(5px);
+}
+
+.modal-box button:active{
+  transform:scale(0.98);
+}
+
+/* Coin payment modal */
+.coin-payment-modal .modal-box {
+  max-width: 400px;
+}
+
+.coin-cost {
+  text-align: center;
+  font-size: 1.5rem;
+  color: var(--coin);
+  margin: 15px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.coin-balance-check {
+  background: rgba(255, 215, 0, 0.1);
+  border: 1px solid var(--coin);
+  border-radius: 12px;
+  padding: 15px;
+  margin: 15px 0;
+  text-align: center;
+  backdrop-filter: blur(5px);
+}
+
+.coin-balance-check .balance {
+  font-size: 1.3rem;
+  font-weight: bold;
+  color: var(--coin);
+}
+
+.coin-balance-check .insufficient {
+  color: var(--danger);
+  font-size: 0.9rem;
+  margin-top: 5px;
+}
+
+/* Media type selection */
+.media-type-select {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 15px 0;
+}
+
+.media-type-btn {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 15px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(5px);
+}
+
+.media-type-btn:hover {
+  background: rgba(255,255,255,0.1);
+  transform: translateY(-2px);
+}
+
+.media-type-btn.selected {
+  background: rgba(0,198,255,0.1);
+  border-color: var(--accent);
+}
+
+.media-type-icon {
+  font-size: 2.5rem;
+  margin-bottom: 10px;
+  display: block;
+}
+
+/* Report modal */
+.report-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 20px 0;
+}
+
+.report-option {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.report-option:hover {
+  background: rgba(255,118,117,0.1);
+  border-color: var(--danger);
+}
+
+.report-option.selected {
+  background: rgba(255,118,117,0.2);
+  border-color: var(--danger);
+}
+
+/* Payment gateway modal - REAL MONEY */
+.payment-gateway-modal .modal-box {
+  max-width: 450px;
+}
+
+.payment-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 20px 0;
+}
+
+.payment-option {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 15px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: all 0.3s ease;
+}
+
+.payment-option:hover {
+  background: rgba(0,198,255,0.1);
+  border-color: var(--accent);
+}
+
+.payment-option.selected {
+  background: rgba(0,198,255,0.2);
+  border-color: var(--accent);
+}
+
+.payment-icon {
+  font-size: 1.5rem;
+}
+
+.payment-details {
+  flex: 1;
+}
+
+.payment-price {
+  font-size: 1.2rem;
+  color: var(--coin);
+  font-weight: bold;
+}
+
+.real-money-price {
+  font-size: 1.2rem;
+  color: var(--green);
+  font-weight: bold;
+}
+
+/* Admin modal */
+.admin-modal .modal-box {
+  max-width: 500px;
+}
+
+.user-list {
+  max-height: 300px;
+  overflow-y: auto;
+  margin: 15px 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px;
+  background: rgba(0,0,0,0.3);
+}
+
+.user-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.user-item:last-child {
+  border-bottom: none;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.badge-selector {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.badge-option {
+  padding: 5px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.3s ease;
+}
+
+.badge-option:hover {
+  opacity: 0.8;
+}
+
+.badge-option.selected {
+  transform: scale(1.05);
+  box-shadow: 0 0 10px rgba(255,255,255,0.2);
+}
+
+/* ===== MOBILE RESPONSIVE ===== */
+@media (max-width: 480px) {
+  .start-card{
+    padding:25px 20px;
+    max-width:90%;
+    border-radius:18px;
+  }
+  
+  .start-card h1{
+    font-size:1.5rem;
+  }
+  
+  .start-card button{
+    padding:14px;
+    font-size:0.95rem;
+    min-height:52px;
+  }
+  
+  .header{
+    padding:10px 12px;
+    min-height:56px;
+  }
+  
+.header h1{
+  font-size:1.1rem;
+  flex:1;
+  min-width:0;
+}
+
+.header-right{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:8px;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  margin-left:auto;
+}
+
+.header-home-btn{
+  background: rgba(0,0,0,0.6);
+  border: 1px solid var(--border);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+  
+  .coin-display {
+    padding: 6px 12px;
+    font-size: 0.85rem;
+  }
+  
+  .video-grid{
+    padding:8px;
+    gap:8px;
+  }
+  
+  .video-controls{
+    bottom:15px;
+    padding:10px 14px;
+    gap:8px;
+  }
+  
+  .ctrl-btn{
+    padding:10px;
+    min-width:44px;
+    min-height:44px;
+    font-size:1rem;
+  }
+  
+  .chat-input{
+    padding:10px 12px;
+    gap:8px;
+  }
+  
+  .chat-input input{
+    padding:10px 14px;
+    font-size:16px;
+    min-height:44px;
+  }
+  
+  .chat-input button{
+    padding:10px 16px;
+    min-width:60px;
+    min-height:44px;
+  }
+  
+  .msg{
+    max-width:90%;
+    padding:10px 14px;
+    font-size:0.9rem;
+  }
+  
+  .modal-box{
+    padding:20px;
+    max-width:90%;
+  }
+  
+  .video-card {
+    aspect-ratio: 1/1;
+  }
+  
+  .watermark-logo {
+    width: 25px;
+    height: 25px;
+    bottom: 6px;
+    right: 6px;
+  }
+  
+  .video-coins {
+    font-size: 0.6rem;
+    padding: 3px 6px;
+    bottom: 6px;
+    left: 6px;
+  }
+  
+  .record-btn {
+    bottom: 80px;
+    right: 15px;
+    padding: 10px 12px;
+    font-size: 0.9rem;
+  }
+  
+  .invite-link-display {
+    max-width: 100px;
+    font-size: 0.7rem;
+    padding: 6px 8px;
+  }
+  
+  .report-btn {
+    top: 8px;
+    right: 8px;
+    padding: 4px 8px;
+    font-size: 0.7rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .start-card{
+    padding:20px 16px;
+  }
+  
+  .start-card h1{
+    font-size:1.3rem;
+  }
+  
+  .header h1{
+    font-size:1rem;
+  }
+  
+  .video-controls{
+    gap:6px;
+  }
+  
+  .ctrl-btn{
+    min-width:40px;
+    min-height:40px;
+    padding:8px;
+  }
+  
+  .video-grid {
+    padding: 6px;
+    gap: 6px;
+  }
+}
+
+@media (max-height: 600px) and (orientation: landscape) {
+  .app{
+    height:100vh;
+  }
+  
+  .header{
+    padding:8px 12px;
+    min-height:50px;
+  }
+  
+  .video-controls{
+    bottom:10px;
+    padding:8px 12px;
+  }
+  
+  .ctrl-btn{
+    padding:8px;
+    min-width:40px;
+    min-height:40px;
+  }
+  
+  button {
+    touch-action: manipulation;
+  }
+  
+  .msg{
+    padding:8px 12px;
+    font-size:0.85rem;
+  }
+  
+  .video-grid {
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: 1fr;
+    gap: 8px;
+  }
+  
+  .video-card {
+    aspect-ratio: 16/9;
+  }
+  
+  .record-btn {
+    bottom: 60px;
+    right: 10px;
+  }
+}
+
+/* Notification */
+.copy-notification{
+  position:fixed;
+  top:80px;
+  left:50%;
+  transform:translateX(-50%);
+  background:rgba(0,0,0,0.9);
+  color:white;
+  padding:12px 20px;
+  border-radius:12px;
+  border:1px solid var(--accent);
+  z-index:1000;
+  animation:slideDown 0.3s ease;
+  backdrop-filter:blur(10px);
+  font-size:0.9rem;
+  text-align:center;
+  max-width:90%;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+
+@keyframes slideDown{
+  from{
+    opacity:0;
+    transform:translateX(-50%) translateY(-20px);
+  }
+  to{
+    opacity:1;
+    transform:translateX(-50%) translateY(0);
+  }
+}
+
+/* Loading spinner */
+.loading-spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-radius: 50%;
+  border-top-color: var(--accent);
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Connection Status - header badge */
+.connection-status {
+  position: static;
+  background: rgba(0,0,0,0.6);
+  padding: 8px 14px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border);
+}
+.header .connection-status {
+  margin: 0;
+  font-size: 0.75rem;
+  padding: 6px 10px;
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+  animation: pulse 2s infinite;
+}
+
+.status-connected { background: var(--green); }
+.status-connecting { background: var(--orange); }
+.status-disconnected { background: var(--danger); }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Participant counter */
+.participant-counter {
+  background: rgba(0, 198, 255, 0.1);
+  border: 1px solid rgba(0, 198, 255, 0.3);
+  color: #00c6ff;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  margin-left: 10px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  backdrop-filter: blur(5px);
+}
+
+/* Mobile Home Button */
+.mobile-home-btn {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + 12px);
+  right: calc(env(safe-area-inset-right, 0px) + 12px);
+  background: rgba(0,0,0,0.9);
+  border: 1px solid var(--border);
+  color: white;
+  padding: 10px 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  z-index: 20000;
+  font-size: 0.9rem;
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(10px);
+  display: none;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+
+@media (max-width: 768px) {
+  .mobile-home-btn {
+    display: flex;
+  }
+  .invite-bar { display: none; }
+  .video-card {
+    width: 100%;
+    max-width: 100%;
+  }
+}
+
+/* File/media cost indicator */
+.media-cost {
+  display: inline-block;
+  background: rgba(255, 215, 0, 0.1);
+  border: 1px solid var(--coin);
+  color: var(--coin);
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  margin-left: 5px;
+}
+
+/* Nickname display in text chat */
+.nickname-display {
+  font-weight: bold;
+  margin-bottom: 4px;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.nickname-display.me {
+  color: #00d19a;
+}
+
+.nickname-display.other {
+  color: #00c6ff;
+}
+
+/* Improve scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255,255,255,0.05);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0,198,255,0.5);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0,198,255,0.7);
+}
+
+/* iOS specific fixes */
+@supports (-webkit-touch-callout: none) {
+  .chat-input input {
+    font-size: 16px !important;
+  }
+  
+  .modal-box input {
+    font-size: 16px !important;
+  }
+  
+  body {
+    min-height: -webkit-fill-available;
+  }
+}
+
+/* Animation for new user join */
+@keyframes userJoin {
+  0% { transform: scale(0.8); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.user-join-animation {
+  animation: userJoin 0.5s ease;
+}
+
+/* Empty video panel */
+.empty-panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255,255,255,0.3);
+  font-size: 0.9rem;
+  text-align: center;
+  padding: 20px;
+}
+
+/* Coin animation */
+.coin-animation {
+  position: absolute;
+  font-size: 1.5rem;
+  z-index: 1000;
+  animation: coinFly 1s ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes coinFly {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1) rotate(0deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--tx), var(--ty)) scale(0.5) rotate(360deg);
+  }
+}
+
+/* Floating animation */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.floating {
+  animation: float 3s ease-in-out infinite, pulse 2.4s ease-in-out infinite;
+}
+
+/* Pulse animation */
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(0, 198, 255, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(0, 198, 255, 0);
+  }
+}
+
+.pulse {
+  animation: pulse 2s infinite;
+}
+
+/* Glow animation */
+@keyframes glow {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.glow {
+  animation: glow 2s ease-in-out infinite;
+}
+
+/* Button press animation */
+@keyframes buttonPress {
+  0% { transform: scale(1); }
+  50% { transform: scale(0.95); }
+  100% { transform: scale(1); }
+}
+
+.button-press {
+  animation: buttonPress 0.2s ease;
+}
+
+/* Message animation */
+@keyframes messageSlide {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.message-slide {
+  animation: messageSlide 0.3s ease;
+}
+
+/* Media upload animation */
+@keyframes mediaUpload {
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.media-upload-animation {
+  animation: mediaUpload 0.3s ease;
+}
+
+/* Admin controls */
+.admin-controls {
+  display: flex;
+  gap: 10px;
+  margin-left: 10px;
+}
+
+.admin-btn {
+  background: rgba(155, 89, 182, 0.2);
+  border: 1px solid var(--admin);
+  color: var(--admin);
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  backdrop-filter: blur(5px);
+}
+
+/* Recording canvas */
+#recordingCanvas {
+  position: fixed;
+  top: -9999px;
+  left: -9999px;
+  width: 1280px;
+  height: 720px;
+  z-index: -9999;
+}
+
+/* Click coin animation */
+.coin-transfer {
+  position: fixed;
+  font-size: 2rem;
+  z-index: 1000;
+  animation: coinTransfer 1s ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes coinTransfer {
+  0% {
+    opacity: 1;
+    transform: translate(var(--start-x), var(--start-y)) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--end-x), var(--end-y)) scale(0.5);
+  }
+}
+
+/* Fix for UI overlaps */
+.video-label {
+  z-index: 5 !important;
+}
+
+.report-btn {
+  z-index: 20 !important;
+}
+
+.video-container {
+  z-index: 1 !important;
+}
+
+.video-placeholder {
+  z-index: 1 !important;
+}
+
+/* Nickname modal */
+.nickname-modal .modal-box {
+  max-width: 400px;
+}
+
+.nickname-modal input {
+  margin-bottom: 15px;
+}
+/* MM logo style for empty panels */
+.mm-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 24px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #00c6ff, #0066cc);
+  color: #000;
+  font-weight: 800;
+  font-size: 0.9rem;
+  margin-right: 6px;
+  box-shadow: 0 0 10px rgba(0, 198, 255, 0.5);
+}
+button {
+  font-family: system-ui, sans-serif;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--light);
+  padding: 10px 14px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+  outline: none;
+}
+button:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+  border-color: var(--primary);
+}
+button:active {
+  transform: translateY(-1px);
+}
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+ 
+@keyframes panelPopIn {
+  0% { transform: scale(0.98); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes videoFadeIn {
+  0% { opacity: 0; filter: saturate(0.9) brightness(0.95); }
+  100% { opacity: 1; filter: saturate(1) brightness(1); }
+}
+
+@keyframes pulseGlow {
+  0% { box-shadow: 0 0 0 rgba(0,209,154,0.0), 0 0 20px rgba(0,209,154,0.25); }
+  50% { box-shadow: 0 0 0 6px rgba(0,209,154,0.15), 0 0 28px rgba(0,209,154,0.4); }
+  100% { box-shadow: 0 0 0 rgba(0,209,154,0.0), 0 0 20px rgba(0,209,154,0.25); }
+}
+</style>
+<script src="/js/ad-manager.js"></script>
+</head>
+
+<body>
+<!-- Background Animation -->
+<div class="background-animation" id="threeContainer"></div>
+
+  <!-- Mobile Home Button removed -->
+
+<!-- ===== START CARD ===== -->
+<div class="start-overlay" id="startOverlay">
+  <div class="start-card">
+    <h1>ManaMingle Group Chat</h1>
+    <button id="startTextBtn" class="floating">
+      <span>💬</span>
+      <span>Group Text Chat</span>
+    </button>
+    <button id="startVideoBtn" class="floating">
+      <span>🎥</span>
+      <span>Group Video Chat</span>
+    </button>
+    <button id="homeBtn" class="home-btn">
+      <span>🏠</span>
+      <span>Home</span>
+    </button>
+  </div>
+</div>
+
+<div class="app" id="appContainer">
+  <!-- Header -->
+  <div class="header">
+    <div class="room-info">
+      <h1 id="roomTitle">Group Chat</h1>
+      <span class="participant-counter" id="participantCount">
+        <span>👥</span>
+        <span id="participantCountText">0</span>
+      </span>
+    </div>
+    <div class="connection-status" id="connectionStatus" style="display:none;">
+      <span class="status-dot" id="statusDot"></span>
+      <span id="statusText">Connecting...</span>
+    </div>
+    <div class="header-right">
+      <div class="coin-display" id="headerCoinDisplay">
+        <span>🪙</span>
+        <span id="currentCoins">0</span>
+      </div>
+      <div class="coin-display" id="turnStatusBadge" style="display:none;">
+        <span>🔁</span>
+        <span id="turnStatusText">Checking TURN…</span>
+      </div>
+      <button class="header-home-btn" id="headerHomeBtn" title="Home">🏠</button>
+    </div>
+    <div class="invite-bar">
+      <div class="invite-link-display" id="inviteLinkDisplay"></div>
+      <button id="copyInviteBtn" title="Copy Invite Link">📋</button>
+      <button class="back-btn" id="backBtn">⬅</button>
+    </div>
+  </div>
+
+  <!-- Text Chat -->
+  <div class="text-chat" id="textChat">
+    <div class="chat-messages" id="messages">
+      <!-- Messages appear here -->
+    </div>
+    <div class="media-preview" id="mediaPreview">
+      <div class="preview-container">
+        <img id="previewImage" class="preview-media" style="display:none;">
+        <video id="previewVideo" class="preview-media" style="display:none;" controls></video>
+        <div class="preview-info">
+          <div id="previewFileName"></div>
+          <div id="previewFileSize"></div>
+          <div id="previewCost"></div>
+        </div>
+        <button class="remove-preview" id="removePreviewBtn">❌</button>
+      </div>
+    </div>
+    <div class="controls-area">
+      <div class="input-container">
+        <textarea id="msgInput" class="chat-input" placeholder="Type a message…" autocomplete="off"></textarea>
+      </div>
+      <button id="mediaUploadBtn" class="action-btn" title="Send media (30-50 coins)">📎</button>
+      <button id="sendMessageBtn" class="send-btn" title="Send">➤</button>
+    </div>
+  </div>
+
+  <!-- Video Chat -->
+  <div class="video-chat" id="videoChat">
+    <div class="video-grid" id="videoGrid">
+      <!-- Fixed 4 video panels -->
+      <div class="video-card" id="video-panel-1" data-panel="1">
+        <div class="video-container">
+          <div class="video-placeholder">
+            <img src="logo.jpeg" alt="Mana Mingle" class="anon-logo">
+            <span>Anonymous</span>
+          </div>
+          <div class="video-coins" style="display:none;">
+            <span>🪙</span>
+            <span id="panelCoins1">0</span>
+          </div>
+        </div>
+        <div class="video-label">You</div>
+        <div class="panel-watermark">manamingle.site</div>
+        <div class="watermark-logo">
+          
+        </div>
+      </div>
+      <div class="video-card" id="video-panel-2" data-panel="2">
+        <div class="video-container">
+          <div class="video-placeholder">
+            <img src="logo.jpeg" alt="Mana Mingle" class="anon-logo">
+            <span>Anonymous</span>
+          </div>
+          <div class="video-coins" style="display:none;">
+            <span>🪙</span>
+            <span id="panelCoins2">0</span>
+          </div>
+        </div>
+        <div class="video-label">Anonymous</div>
+        <div class="panel-watermark">manamingle.site</div>
+        <div class="watermark-logo">
+          
+        </div>
+      </div>
+      <div class="video-card" id="video-panel-3" data-panel="3">
+        <div class="video-container">
+          <div class="video-placeholder">
+            <img src="logo.jpeg" alt="Mana Mingle" class="anon-logo">
+            <span>Anonymous</span>
+          </div>
+          <div class="video-coins" style="display:none;">
+            <span>🪙</span>
+            <span id="panelCoins3">0</span>
+          </div>
+        </div>
+        <div class="video-label">Anonymous</div>
+        <div class="panel-watermark">manamingle.site</div>
+        <div class="watermark-logo">
+          
+        </div>
+      </div>
+      <div class="video-card" id="video-panel-4" data-panel="4">
+        <div class="video-container">
+          <div class="video-placeholder">
+            <img src="logo.jpeg" alt="Mana Mingle" class="anon-logo">
+            <span>Anonymous</span>
+          </div>
+          <div class="video-coins" style="display:none;">
+            <span>🪙</span>
+            <span id="panelCoins4">0</span>
+          </div>
+        </div>
+        <div class="video-label">Anonymous</div>
+        <div class="panel-watermark">manamingle.site</div>
+        <div class="watermark-logo">
+          
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Nickname Modal -->
+<div class="modal nickname-modal" id="nicknameModal" style="display:none;">
+  <div class="modal-box">
+    <h3>Enter Your Nickname</h3>
+    <p style="text-align:center; margin-bottom:20px; color:rgba(255,255,255,0.8);">Enter a nickname for text chat (3-20 characters)</p>
+    <input type="text" id="nicknameInputModal" placeholder="Enter your nickname" maxlength="20">
+    <button id="confirmNicknameBtn">Join Text Chat</button>
+    <button id="cancelNicknameBtn" style="margin-top:10px; background:transparent; border:1px solid var(--border);">Cancel</button>
+  </div>
+</div>
+
+<!-- Media Type Selection Modal -->
+<div class="modal coin-payment-modal" id="mediaTypeModal" style="display:none;">
+  <div class="modal-box">
+    <h3>📎 Send Media</h3>
+    
+    <div class="coin-balance-check">
+      <div>Your balance: <span class="balance" id="modalCoinBalance">0</span> coins</div>
+      <div class="insufficient" id="insufficientCoins" style="display:none;">Not enough coins!</div>
+    </div>
+    
+    <div class="media-type-select">
+      <div class="media-type-btn" data-type="photo">
+        <span class="media-type-icon">🖼️</span>
+        <div>Photo</div>
+        <div class="coin-cost">30 coins</div>
+      </div>
+      <div class="media-type-btn" data-type="video">
+        <span class="media-type-icon">🎥</span>
+        <div>5s Video</div>
+        <div class="coin-cost">50 coins</div>
+      </div>
+    </div>
+    
+    <button id="proceedMediaBtn" disabled>Select Media</button>
+    <button id="cancelMediaBtn" style="margin-top:10px; background:transparent; border:1px solid var(--border);">Cancel</button>
+  </div>
+</div>
+
+<!-- Media Upload Modal -->
+<div class="modal" id="mediaUploadModal" style="display:none;">
+  <div class="modal-box">
+    <h3 id="mediaUploadTitle">Upload Photo</h3>
+    <p id="mediaUploadCost" style="text-align:center; margin:10px 0; color:var(--coin); font-weight: bold;"></p>
+    
+    <input type="file" id="mediaFileInput" accept="image/*,video/*" style="display:none;">
+    
+    <div style="text-align:center; margin:20px 0;">
+      <div style="font-size:0.9rem; color:rgba(255,255,255,0.7); margin-bottom:10px;">Select a file to upload</div>
+      <button id="browseMediaBtn" style="width:100%; padding:15px; background:rgba(0,198,255,0.1); border:2px dashed var(--accent); border-radius:12px; color:var(--accent); cursor:pointer;">
+        📁 Browse Files
+      </button>
+      
+      <div id="mediaPreviewContainer" style="margin-top:20px; display:none;">
+        <img id="uploadPreview" style="max-width:200px; max-height:200px; border-radius:8px; margin:0 auto; display:block; border: 2px solid var(--accent);">
+        <video id="uploadVideoPreview" style="max-width:200px; max-height:200px; border-radius:8px; margin:10px auto; display:none; border: 2px solid var(--accent);" controls></video>
+        <div style="margin-top:10px; font-size:0.9rem;" id="selectedFileName"></div>
+      </div>
+    </div>
+    
+    <button id="confirmUploadBtn" disabled>Upload & Pay</button>
+    <button id="cancelUploadBtn" style="margin-top:10px; background:transparent; border:1px solid var(--border);">Back</button>
+  </div>
+</div>
+
+<!-- Report Modal -->
+<div class="modal" id="reportModal" style="display:none;">
+  <div class="modal-box">
+    <h3>🚨 Report User</h3>
+    <p id="reportTarget" style="text-align:center; margin-bottom:20px; color:var(--danger);"></p>
+    
+    <div class="report-options">
+      <div class="report-option" data-reason="Inappropriate content">
+        <div style="font-weight:bold;">Inappropriate content</div>
+        <div style="font-size:0.8rem; color:rgba(255,255,255,0.7);">Sharing inappropriate or offensive material</div>
+      </div>
+      <div class="report-option" data-reason="Harassment">
+        <div style="font-weight:bold;">Harassment</div>
+        <div style="font-size:0.8rem; color:rgba(255,255,255,0.7);">Bullying, threats, or harassment</div>
+      </div>
+      <div class="report-option" data-reason="Spam">
+        <div style="font-weight:bold;">Spam</div>
+        <div style="font-size:0.8rem; color:rgba(255,255,255,0.7);">Excessive messages or promotions</div>
+      </div>
+      <div class="report-option" data-reason="Other">
+        <div style="font-weight:bold;">Other</div>
+        <div style="font-size:0.8rem; color:rgba(255,255,255,0.7);">Another issue not listed</div>
+      </div>
+    </div>
+    
+    <textarea id="reportDescription" placeholder="Additional details (optional)" style="width:100%; height:80px; padding:12px; margin-top:15px; border-radius:12px; border:1px solid var(--border); background:rgba(255,255,255,0.05); color:white; font-family:'Baloo Tamma 2',cursive; resize:none;"></textarea>
+    
+    <button id="submitReportBtn">Submit Report</button>
+    <button id="cancelReportBtn" style="margin-top:10px; background:transparent; border:1px solid var(--border);">Cancel</button>
+  </div>
+</div>
+
+<!-- Payment Gateway Modal - REAL MONEY -->
+<div class="modal payment-gateway-modal" id="paymentModal" style="display:none;">
+  <div class="modal-box">
+    <h3>💎 Unlock Premium Features</h3>
+    <p style="text-align:center; margin-bottom:20px; color:rgba(255,255,255,0.8);">Get access to Screen Sharing & Recording</p>
+    
+    <div class="payment-options">
+      <div class="payment-option" data-amount="4.99" data-duration="24">
+        <span class="payment-icon">💳</span>
+        <div class="payment-details">
+          <div style="font-weight:bold;">24 Hours Access</div>
+          <div style="font-size:0.8rem; color:rgba(255,255,255,0.7);">Premium features for 24 hours</div>
+        </div>
+        <div class="real-money-price">$4.99</div>
+      </div>
+      <div class="payment-option" data-amount="19.99" data-duration="168">
+        <span class="payment-icon">💎</span>
+        <div class="payment-details">
+          <div style="font-weight:bold;">7 Days Access</div>
+          <div style="font-size:0.8rem; color:rgba(255,255,255,0.7);">Premium features for 7 days</div>
+        </div>
+        <div class="real-money-price">$19.99</div>
+      </div>
+      <div class="payment-option" data-amount="49.99" data-duration="720">
+        <span class="payment-icon">👑</span>
+        <div class="payment-details">
+          <div style="font-weight:bold;">30 Days Access</div>
+          <div style="font-size:0.8rem; color:rgba(255,255,255,0.7);">Premium features for 30 days</div>
+        </div>
+        <div class="real-money-price">$49.99</div>
+      </div>
+    </div>
+    
+    <button id="confirmPaymentBtn" disabled>Purchase Access</button>
+    <button id="cancelPaymentBtn" style="margin-top:10px; background:transparent; border:1px solid var(--border);">Cancel</button>
+  </div>
+</div>
+
+<!-- Admin Modal removed (moved to admin dashboard) -->
+
+<!-- Recording Indicator -->
+<div class="recording-indicator" id="recordingIndicator" style="display:none;">
+  <div class="recording-dot"></div>
+  <span>Recording...</span>
+</div>
+
+<!-- Record Button - Only shows in video chat -->
+<button class="record-btn" id="recordBtn" title="Purchase recording feature">
+  <span>⏺️</span>
+  <span>Record</span>
+</button>
+
+<!-- Connection Status moved into header -->
+
+<!-- Video Controls - FLOATING -->
+<div class="video-controls" id="globalControls" style="display:none;">
+  <button class="ctrl-btn" data-action="toggleMic" title="Toggle Mic (M)">🎤</button>
+  <button class="ctrl-btn" data-action="toggleCam" title="Toggle Camera (C)">📷</button>
+  <button class="ctrl-btn" data-action="shareScreen" title="Share Screen (Premium)">🖥️</button>
+</div>
+
+<!-- Admin Controls Button removed -->
+
+<!-- Recording Canvas (hidden) -->
+<canvas id="recordingCanvas"></canvas>
+
+<!-- Notification Container -->
+<div id="notificationContainer"></div>
+
+<script>
+  (function(){
+    const w = console.warn, l = console.log, i = console.info;
+    const patterns = [
+      /tensorflow|tf(\.min)?\.js|nsfwjs/i,
+      /kernel .*already registered/i,
+      /backend .*already registered/i,
+      /Platform .*already been set/i,
+      /already been set/i,
+      /Reusing existing backend factory/i
+    ];
+    console.warn = (...args) => {
+      const text = args.map(a => {
+        if (typeof a === 'string') return a;
+        if (a && typeof a.message === 'string') return a.message;
+        try { return String(a); } catch { return ''; }
+      }).join(' ');
+      if (patterns.some(p => p.test(text))) return;
+      w(...args);
+    };
+    console.log = (...args) => {
+      const text = args.map(a => {
+        if (typeof a === 'string') return a;
+        if (a && typeof a.message === 'string') return a.message;
+        try { return String(a); } catch { return ''; }
+      }).join(' ');
+      if (patterns.some(p => p.test(text))) return;
+      l(...args);
+    };
+    console.info = (...args) => {
+      const text = args.map(a => {
+        if (typeof a === 'string') return a;
+        if (a && typeof a.message === 'string') return a.message;
+        try { return String(a); } catch { return ''; }
+      }).join(' ');
+      if (patterns.some(p => p.test(text))) return;
+      i(...args);
+    };
+  })();
+</script>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script>
+  /* ===== GLOBAL STATE ===== */
+  let iceConfig = null;          // cached STUN/TURN servers
+
+async function loadIceServers() {
+  if (iceConfig) return iceConfig;
+
+  try {
+    const primary = getServerBaseUrl() + "/api/turn";
+    let res = await fetch(primary, { cache: "no-store" });
+    if (!res.ok) {
+      const alt = window.location.origin + "/api/turn";
+      res = await fetch(alt, { cache: "no-store" });
+      if (!res.ok) throw new Error("turn_fail");
+    }
+    iceConfig = await res.json();
+  } catch (_) {
+    iceConfig = {
+      iceServers: [
+        { urls: "stun:stun.l.google.com:19302" },
+        { urls: "stun:stun1.l.google.com:19302" },
+        { urls: "stun:stun2.l.google.com:19302" },
+        { urls: "stun:stun3.l.google.com:19302" },
+        { urls: "stun:stun4.l.google.com:19302" }
+      ]
+    };
+  }
+  return iceConfig;
+}
+
+  /* ===== GLOBAL STATE ===== */
+let socket = null;
+let roomId = null;
+let nickname = null;
+let localStream = null;
+const peers = {};
+const socketToUser = new Map();
+  const userData = new Map();
+let speakerInterval = null;
+let socketFallbackTried = false;
+
+function getServerBaseUrl() {
+  const h = window.location.hostname;
+  if (h.includes('localhost') || h === '127.0.0.1') return 'http://localhost:3000';
+  return 'https://manamingle.site';
+}
+let isTextMode = false;
+let isVideoMode = false;
+let inviteMode = 'group_video';
+let paymentEnabledFlag = false;
+let premiumRecordingEnabledFlag = false;
+let premiumScreenshareEnabledFlag = false;
+let coins = parseInt(localStorage.getItem('manaCoins') || '0', 10) || 0;
+let participantCount = 0;
+let isAdmin = false;
+let isCreator = false;
+  let badges = {};
+  let userId = null;
+  const pendingCandidates = {};
+  let preferredLang = localStorage.getItem('groupPreferredLang') || 'off';
+  let autoTranslate = localStorage.getItem('groupAutoTranslate') === 'true';
+  // Media upload state
+  let selectedMediaType = null;
+  let selectedMediaFile = null;
+  let mediaUploadCost = 0;
+  
+  // Recording state
+  let hasPremiumAccess = false;
+  let isScreenSharing = false;
+  let isRecordingEnabled = false;
+  let isRecording = false;
+  let recordingEndTime = 0;
+  let mediaRecorder = null;
+  let recordedChunks = [];
+  let recordingStream = null;
+  let recordingCanvas = null;
+  let recordingContext = null;
+  let recordingDrawRAF = null;
+  let recordingAudioContext = null;
+  let recordingAudioDestination = null;
+  
+ /* ===== VIDEO PANELS ===== */
+const videoPanels = {
+  1: { userId: null, peerId: null, stream: null, videoElement: null, element: null },
+  2: { userId: null, peerId: null, stream: null, videoElement: null, element: null },
+  3: { userId: null, peerId: null, stream: null, videoElement: null, element: null },
+  4: { userId: null, peerId: null, stream: null, videoElement: null, element: null }
+};
+  // Report state
+  let reportTarget = null;
+  let selectedReportReason = null;
+  
+  // Payment state
+  let selectedPaymentOption = null;
+  
+  // Admin state
+  let selectedAdminUser = null;
+  let selectedAdminBadge = null;
+  
+  // Special emojis
+  const specialEmojis = ['💖', '✨', '🌟', '💎', '👑', '🔥', '💯', '🌈', '🦄', '🍀', '⚡', '🎊', '🎁', '🎉', '🏆'];
+
+  // AI Moderation State
+  let nsfwModel = null;
+  let moderationInterval = null;
+  let isModerationActive = false;
+
+ /* ===== MEDIA / MESSAGE STATE ===== */
+const receivedMessageIds = new Set();
+const receivedMediaIds = new Set();
+const MEDIA_CHUNK_SIZE = 64 * 1024;
+const incomingMedia = {}; // ✅ FIX
+  // ICE Servers configuration
+  
+function shouldCreateOffer(myId, otherId) {
+  return myId < otherId;
+}
+  /* ===== INITIALIZATION ===== */
+  document.addEventListener('DOMContentLoaded', function () {
+    console.log('ManaMingle Group Chat - Initializing...');
+    
+    // Load coins and recording status from localStorage
+    loadUserData();
+    
+    // Parse URL parameters
+    const params = new URLSearchParams(window.location.search);
+    const inviteRoom = params.get('room');
+    const tagsParam = params.get('tags');
+    
+    if (tagsParam) {
+      try {
+        const tags = JSON.parse(decodeURIComponent(tagsParam));
+        console.log('Loaded tags from URL:', tags);
+      } catch (e) {
+        console.error('Failed to parse tags:', e);
+      }
+    }
+    
+    if (inviteRoom) {
+      roomId = inviteRoom;
+      inviteMode = params.get('mode') || 'group_video';
+      
+      if (inviteMode === 'group_text') {
+        // Show nickname modal when joining via invite link
+        setTimeout(() => {
+          document.getElementById('nicknameModal').style.display = 'flex';
+        }, 500);
+      } else {
+        startVideoMode();
+      }
+    }
+    
+    // Setup event listeners
+    setupEventListeners();
+    
+    // Add mobile-specific handlers
+    setupMobileHandlers();
+    
+    // Create CSS particles
+    createCSSParticles();
+    
+    // Update coin display
+    updateCoinDisplay();
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'manaCoins') {
+        const v = parseInt(e.newValue || '0', 10) || 0;
+        coins = v;
+        updateCoinDisplay();
+      }
+    });
+    
+    // Check recording status
+    checkRecordingStatus();
+    
+    // Initialize recording canvas
+    recordingCanvas = document.getElementById('recordingCanvas');
+    recordingContext = recordingCanvas.getContext('2d');
+    
+    // Initialize video panel elements
+    for (let i = 1; i <= 4; i++) {
+      videoPanels[i].element = document.getElementById(`video-panel-${i}`);
+    }
+
+    // TURN status badge
+    (async () => {
+      const badge = document.getElementById('turnStatusBadge');
+      const text = document.getElementById('turnStatusText');
+      try {
+        const primary = getServerBaseUrl() + '/api/turn';
+        let res = await fetch(primary, { cache: 'no-store' });
+        if (!res.ok) {
+          const alt = window.location.origin + '/api/turn';
+          res = await fetch(alt, { cache: 'no-store' });
+        }
+        if (res.ok) {
+          const cfg = await res.json();
+          const servers = (cfg && cfg.iceServers) || [];
+          const hasTurn = servers.some(s => {
+            const u = Array.isArray(s.urls) ? s.urls : [s.urls];
+            return u && u.some(url => String(url).startsWith('turn:') || String(url).startsWith('turns:')) && s.username && s.credential;
+          });
+          badge.style.display = 'flex';
+          text.textContent = hasTurn ? 'TURN Active' : 'STUN Only';
+          badge.style.borderColor = hasTurn ? 'rgba(16,185,129,0.3)' : 'rgba(148,163,184,0.3)';
+        } else {
+          badge.style.display = 'flex';
+          text.textContent = 'STUN Only';
+          badge.style.borderColor = 'rgba(148,163,184,0.3)';
+        }
+      } catch {
+        badge.style.display = 'flex';
+        text.textContent = 'STUN Only';
+        badge.style.borderColor = 'rgba(148,163,184,0.3)';
+      }
+    })();
+  });
+
+  // Fallback for room-ended handler to avoid socket init errors
+  if (typeof window.handleRoomEnded !== 'function') {
+    window.handleRoomEnded = function (data) {
+      showNotification('Room ended', 'warning');
+      try { goBack(); } catch (_) {}
+    };
+  }
+
+  function loadUserData() {
+    // Generate unique userId
+    userId = localStorage.getItem('userId') || `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    localStorage.setItem('userId', userId);
+    
+    // Load coins from localStorage
+    const savedCoins = localStorage.getItem('manaCoins');
+    if (savedCoins) {
+      coins = parseInt(savedCoins, 10) || 1000;
+      console.log('Loaded coins:', coins);
+    }
+    
+    // Load nickname from localStorage
+    const savedNickname = localStorage.getItem('userNickname');
+    if (savedNickname) {
+      nickname = savedNickname;
+    }
+    
+    // Load recording status
+    const recordingData = localStorage.getItem('recordingEnabled');
+    if (recordingData) {
+      const data = JSON.parse(recordingData);
+      isRecordingEnabled = data.enabled || false;
+      recordingEndTime = data.endTime || 0;
+      
+      // Check if recording access is still valid
+      if (recordingEndTime > Date.now()) {
+        hasPremiumAccess = isRecordingEnabled; // Enable premium features
+        enableRecordingFeature();
+      } else {
+        isRecordingEnabled = false;
+        hasPremiumAccess = false;
+        localStorage.removeItem('recordingEnabled');
+      }
+    }
+    
+    // Load badges
+    const savedBadges = localStorage.getItem('userBadges');
+    if (savedBadges) {
+      badges = JSON.parse(savedBadges);
+    }
+  }
+
+  function saveUserData() {
+    localStorage.setItem('manaCoins', coins.toString());
+    localStorage.setItem('userId', userId);
+    if (nickname) {
+      localStorage.setItem('userNickname', nickname);
+    }
+    localStorage.setItem('userBadges', JSON.stringify(badges));
+  }
+
+  function updateCoinDisplay() {
+    document.getElementById('currentCoins').textContent = coins;
+    if (document.getElementById('modalCoinBalance')) {
+      document.getElementById('modalCoinBalance').textContent = coins;
+    }
+    
+    // Update coin display on video panels
+    for (let i = 1; i <= 4; i++) {
+      if (videoPanels[i].userId === userId) {
+        document.getElementById(`panelCoins${i}`).textContent = coins;
+      }
+    }
+  }
+
+  function checkRecordingStatus() {
+    if (isRecordingEnabled && recordingEndTime > Date.now()) {
+      const remainingHours = Math.ceil((recordingEndTime - Date.now()) / (1000 * 60 * 60));
+      console.log(`Recording feature active for ${remainingHours} more hours`);
+    }
+  }
+
+  /* ===== CHAT MODE FUNCTIONS ===== */
+  function startTextMode() {
+    console.log('Starting TEXT mode');
+    
+    // Check if nickname is already entered
+    if (!nickname) {
+      document.getElementById('nicknameModal').style.display = 'flex';
+      document.getElementById('nicknameInputModal').focus();
+      return;
+    }
+    
+    isTextMode = true;
+    isVideoMode = false;
+    inviteMode = 'group_text';
+    
+    document.getElementById('startOverlay').style.display = 'none';
+    document.getElementById('appContainer').style.display = 'flex';
+    document.getElementById('textChat').style.display = 'flex';
+    document.getElementById('videoChat').style.display = 'none';
+    document.getElementById('headerCoinDisplay').style.display = 'flex';
+    document.getElementById('recordBtn').style.display = 'none'; // Hide record button in text chat
+    
+    // Initialize socket
+    initSocket();
+    
+    // Focus input
+    setTimeout(() => {
+      document.getElementById('msgInput').focus();
+    }, 500);
+    setupTranslateControls();
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'manaCoins') {
+        const v = parseInt(e.newValue || '0', 10) || 0;
+        coins = v;
+        updateCoinDisplay();
+      }
+    });
+  }
+
+  function setupTranslateControls() {
+    const ls = document.getElementById('groupLangSelect');
+    const tg = document.getElementById('groupTranslateToggle');
+    if (ls) ls.addEventListener('change', (e) => {
+      preferredLang = e.target.value;
+      localStorage.setItem('groupPreferredLang', preferredLang);
+    });
+    if (tg) tg.addEventListener('click', () => {
+      autoTranslate = !autoTranslate;
+      localStorage.setItem('groupAutoTranslate', String(autoTranslate));
+      tg.classList.toggle('active', autoTranslate);
+    });
+  }
+
+  async function startVideoMode() {
+    console.log('Starting VIDEO mode');
+    isVideoMode = true;
+    isTextMode = false;
+    inviteMode = 'group_video';
+    
+    // In video mode, use anonymous
+    nickname = 'Anonymous';
+    
+    document.getElementById('startOverlay').style.display = 'none';
+    document.getElementById('appContainer').style.display = 'flex';
+    document.getElementById('textChat').style.display = 'none';
+    document.getElementById('videoChat').style.display = 'flex';
+    document.getElementById('headerCoinDisplay').style.display = 'none';
+    const globalOnlineBadgeEl = document.getElementById('globalOnlineBadge');
+    if (globalOnlineBadgeEl) globalOnlineBadgeEl.style.display = 'none';
+    document.getElementById('globalControls').style.display = 'flex';
+    document.getElementById('recordBtn').style.display = (premiumRecordingEnabledFlag || hasPremiumAccess) ? 'flex' : 'none';
+    
+    // Initialize socket
+    initSocket();
+    // Load feature flags
+    try {
+      const resp = await fetch('/api/features/config', { cache: 'no-store' });
+      if (resp.ok) {
+        const cfg = await resp.json();
+        paymentEnabledFlag = !!cfg.paymentEnabled;
+        premiumRecordingEnabledFlag = !!cfg.premiumRecordingEnabled;
+        premiumScreenshareEnabledFlag = !!cfg.premiumScreenshareEnabled;
+      }
+    } catch (_) {}
+    
+    try {
+      // Start camera
+      await startCamera();
+      
+      // Take panel 1 for self (allow pre-connect preview)
+      assignVideoPanel(userId || 'local', 1, true);
+      updateLocalVideoPanel();
+    } catch (error) {
+      console.error('Camera error:', error);
+      showNotification('Camera permission required for video chat', 'error');
+      goBack();
+    }
+  }
+
+  /* ===== VIDEO PANEL MANAGEMENT ===== */
+  function assignVideoPanel(userId, panelNumber, isLocal = false) {
+    const peerSocketId = arguments[3] || null;
+    // Clear existing assignment for this user
+    for (const [panelNum, data] of Object.entries(videoPanels)) {
+      if (data.userId === userId) {
+        data.userId = null;
+        data.peerId = null;
+        data.nickname = panelNum == 1 ? 'You' : 'Anonymous';
+        data.coins = 0;
+        data.badge = null;
+        if (data.videoElement) {
+          data.videoElement.remove();
+          data.videoElement = null;
+        }
+        updateVideoPanel(parseInt(panelNum));
+      }
+    }
+    
+    // Assign to new panel
+    videoPanels[panelNumber].userId = userId;
+    videoPanels[panelNumber].peerId = isLocal ? null : (peerSocketId || null);
+    videoPanels[panelNumber].nickname = isLocal ? 'You' : 'Anonymous';
+    videoPanels[panelNumber].coins = isLocal ? coins : 0;
+    videoPanels[panelNumber].badge = isLocal ? badges[userId] : null;
+    
+    // Update UI
+    updateVideoPanel(panelNumber);
+  }
+
+  function findAvailablePanel() {
+    for (const [panelNum, data] of Object.entries(videoPanels)) {
+      if (!data.userId)
+{
+        return parseInt(panelNum);
+      }
+    }
+    return null; // All panels occupied
+  }
+
+  function updateVideoPanel(panelNumber) {
+  const panel = videoPanels[panelNumber].element;
+  if (!panel) return;
+
+  const data = videoPanels[panelNumber];
+  console.log('📺 Updating panel:', panelNumber, 'userId:', data.userId, 'hasStream:', !!data.stream);
+  const placeholder = panel.querySelector('.video-placeholder');
+  const label = panel.querySelector('.video-label');
+  const coinsDisplay = panel.querySelector('.video-coins');
+  const container = panel.querySelector('.video-container');
+  if (!placeholder || !label || !container || !coinsDisplay) return;
+
+  const existingActions = panel.querySelector('.panel-actions');
+  if (existingActions) existingActions.remove();
+  
+  // Cleanup legacy buttons
+  const existingReportBtn = panel.querySelector('.report-btn');
+  if (existingReportBtn) existingReportBtn.remove();
+
+  /* ================= EMPTY PANEL ================= */
+  if (!data.userId) {
+    panel.classList.remove('me');
+    placeholder.style.display = 'flex';
+    label.textContent = panelNumber === 1 ? 'You' : 'Anonymous';
+    panel.style.border = '2px solid var(--border)';
+    coinsDisplay.style.display = 'none';
+
+    // FIX: do NOT keep stale video
+    container.innerHTML = '';
+    data.videoElement = null;
+    data.stream = null;
+    // Show ManaMingle logo prominently when panel is empty
+    if (placeholder) {
+      placeholder.innerHTML = `
+        <img src="logo.jpeg" alt="Mana Mingle" class="anon-logo" />
+        <span>Anonymous</span>
+      `;
+    }
+    return;
+  }
+
+  /* ================= LOCAL VIDEO ================= */
+  if (data.userId === userId || data.peerId === null) {
+    panel.classList.add('me');
+    placeholder.style.display = 'none';
+    label.textContent = 'You';
+    panel.style.border = '2px solid #00d19a';
+
+    coinsDisplay.style.display = 'flex';
+    coinsDisplay.querySelector('span:nth-child(2)').textContent = coins;
+
+    // ensure video element exists and has stream
+    if (!data.videoElement && localStream) {
+      const video = document.createElement('video');
+      video.autoplay = true;
+      video.playsInline = true;
+      video.setAttribute('autoplay','');
+      video.setAttribute('playsinline','');
+      video.setAttribute('webkit-playsinline','');
+      video.muted = true;
+      video.style.width = '100%';
+      video.style.height = '100%';
+      video.style.objectFit = 'cover';
+      video.setAttribute('playsinline', '');
+      video.srcObject = localStream;
+
+      const ensurePlay = () => {
+        video.play().catch(() => {
+          setTimeout(() => {
+            video.play().catch(() => {
+              const existing = container.querySelector('.tap-to-play');
+              if (!existing) {
+                const overlay = document.createElement('div');
+                overlay.className = 'tap-to-play';
+                overlay.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.4);z-index:10;';
+                const btn = document.createElement('button');
+                btn.textContent = 'Tap to enable video';
+                btn.style.cssText = 'padding:12px 20px;background:#00ff88;color:#000;border:none;border-radius:20px;font-size:16px;font-weight:bold;cursor:pointer;';
+                overlay.appendChild(btn);
+                container.appendChild(overlay);
+                overlay.onclick = () => {
+                  video.play().then(() => overlay.remove()).catch(() => {});
+                };
+              }
+            });
+          }, 300);
+        });
+      };
+      if (video.readyState >= 2) {
+        ensurePlay();
+      } else {
+        video.onloadedmetadata = ensurePlay;
+        video.onloadeddata = ensurePlay;
+      }
+
+      container.appendChild(video);
+      data.videoElement = video;
+      data.stream = localStream;
+    } else if (data.videoElement && !data.videoElement.srcObject && localStream) {
+      data.videoElement.srcObject = localStream;
+      try { data.videoElement.play(); } catch (_) {}
+      data.videoElement.style.width = '100%';
+      data.videoElement.style.height = '100%';
+      data.videoElement.style.objectFit = 'cover';
+    }
+    return;
+  }
+
+  /* ================= REMOTE USER ================= */
+  panel.classList.remove('me');
+  panel.style.border = '2px solid var(--accent)';
+
+  /* ================= REPORT & BLOCK BUTTONS ================= */
+  const actionsContainer = document.createElement('div');
+  actionsContainer.className = 'panel-actions';
+  
+  const reportBtn = document.createElement('button');
+  reportBtn.className = 'report-btn';
+  reportBtn.innerHTML = '<i class="fas fa-flag"></i> Report';
+  reportBtn.onclick = (e) => { e.stopPropagation(); openReportModal(data.userId); };
+  
+  const blockBtn = document.createElement('button');
+  blockBtn.className = 'block-btn';
+  blockBtn.innerHTML = '<i class="fas fa-ban"></i> Block';
+  blockBtn.onclick = (e) => { e.stopPropagation(); blockUser(data.userId); };
+  
+  actionsContainer.appendChild(reportBtn);
+  actionsContainer.appendChild(blockBtn);
+  panel.appendChild(actionsContainer);
+
+  /* ================= REMOTE STREAM HANDLING ================= */
+  const peer = peers[data.peerId];
+  const stream = (peer && peer.remoteStream) || data.stream;
+  if (!stream) {
+    placeholder.style.display = 'flex';
+    label.textContent = 'Anonymous';
+    coinsDisplay.style.display = 'none';
+
+    // FIX: don't leave ghost video
+    container.innerHTML = '';
+    data.videoElement = null;
+    data.stream = null;
+    return;
+  }
+
+  placeholder.style.display = 'none';
+  label.textContent = 'Anonymous';
+
+    // Create or update video element with the latest stream
+    if (!data.videoElement) {
+      const video = document.createElement('video');
+      video.autoplay = true;
+      video.playsInline = true;
+      video.muted = false;
+      video.setAttribute('playsinline', '');
+      video.style.width = '100%';
+      video.style.height = '100%';
+      video.style.objectFit = 'cover';
+      video.srcObject = stream;
+
+    const ensurePlay = () => {
+      video.play().catch(() => {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `
+          position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+          background: rgba(0,0,0,0.6); display: flex; align-items: center;
+          justify-content: center; z-index: 10; cursor: pointer;
+        `;
+        const btn = document.createElement('button');
+        btn.textContent = '▶️ Click to Play';
+        btn.style.cssText = `
+          padding: 12px 20px; background: #00ff88; color: #000; border: none;
+          border-radius: 20px; font-size: 16px; font-weight: bold; cursor: pointer;
+        `;
+        overlay.appendChild(btn);
+        container.appendChild(overlay);
+        overlay.onclick = () => {
+          video.play().then(() => overlay.remove()).catch(() => {});
+        };
+      });
+    };
+    if (video.readyState >= 2) {
+      ensurePlay();
+    } else {
+      video.onloadedmetadata = ensurePlay;
+      video.onloadeddata = ensurePlay;
+    }
+
+    container.appendChild(video);
+    data.videoElement = video;
+    data.stream = stream;
+  } else {
+    if (data.videoElement.srcObject !== stream) {
+      data.videoElement.srcObject = stream;
+    }
+    try { data.videoElement.play(); } catch (_) {}
+    data.stream = stream;
+  }
+
+  /* ================= COINS (UNCHANGED LOGIC) ================= */
+  if (data.coins > 0) {
+    coinsDisplay.style.display = 'flex';
+    coinsDisplay.querySelector('span:nth-child(2)').textContent = data.coins;
+  } else {
+    coinsDisplay.style.display = 'none';
+  }
+}
+
+
+  function updateLocalVideoPanel() {
+    for (const [panelNum, data] of Object.entries(videoPanels)) {
+      if (data.userId === userId) {
+        updateVideoPanel(parseInt(panelNum));
+        break;
+      }
+    }
+  }
+
+  function updateAllVideoPanels() {
+    for (let i = 1; i <= 4; i++) {
+      updateVideoPanel(i);
+    }
+  }
+
+  function handleVideoPanelClick(panelNumber) {
+    if (!isVideoMode || !socket) return;
+    
+    const panelData = videoPanels[panelNumber];
+    if (!panelData.userId || panelData.userId === userId) return;
+    
+    // Check if user has enough coins
+    if (coins < 10) {
+      showNotification('You need at least 10 coins to send special emoji', 'error');
+      return;
+    }
+    
+    // Deduct coins from sender
+    coins -= 10;
+    updateCoinDisplay();
+    saveUserData();
+    
+    const randomEmoji = specialEmojis[Math.floor(Math.random() * specialEmojis.length)];
+
+    // Send coin transfer to the clicked user
+    socket.emit('coin-transfer', {
+      roomId: roomId,
+      fromUserId: userId,
+      toUserId: panelData.userId,
+      amount: 10,
+      type: 'special_emoji',
+      emoji: randomEmoji
+    });
+    
+    // Show special emoji animation
+    showSpecialEmoji(panelNumber, randomEmoji);
+    
+    // Show coin animation
+    showCoinTransferAnimation(panelNumber);
+    
+    showNotification('Sent special emoji! -10 coins', 'success');
+  }
+
+  function showSpecialEmoji(panelNumber, emojiChar) {
+    const panel = videoPanels[panelNumber].element;
+    if (!panel) return;
+    
+    const emojiElement = document.createElement('div');
+    emojiElement.className = 'special-emoji';
+    emojiElement.textContent = emojiChar || '✨';
+    
+    panel.appendChild(emojiElement);
+    
+    // Remove after animation
+    setTimeout(() => {
+      emojiElement.remove();
+    }, 2500);
+  }
+
+  function showCoinTransferAnimation(panelNumber) {
+    const panel = videoPanels[panelNumber].element;
+    if (!panel) return;
+    
+    const rect = panel.getBoundingClientRect();
+    const startX = window.innerWidth / 2;
+    const startY = window.innerHeight / 2;
+    const endX = rect.left + rect.width / 2;
+    const endY = rect.top + rect.height / 2;
+    
+    const coin = document.createElement('div');
+    coin.className = 'coin-transfer';
+    coin.textContent = '🪙';
+    coin.style.position = 'fixed';
+    coin.style.left = startX + 'px';
+    coin.style.top = startY + 'px';
+    coin.style.zIndex = '9999';
+    coin.style.fontSize = '2rem';
+    coin.style.setProperty('--start-x', '0px');
+    coin.style.setProperty('--start-y', '0px');
+    coin.style.setProperty('--end-x', `${endX - startX}px`);
+    coin.style.setProperty('--end-y', `${endY - startY}px`);
+    
+    document.body.appendChild(coin);
+    
+    setTimeout(() => coin.remove(), 1000);
+  }
+
+  /* ===== SOCKET.IO INITIALIZATION ===== */
+  function initSocket() {
+    if (socket && socket.connected) return;
+    
+    updateConnectionStatus('connecting');
+    
+    try {
+      const serverUrl = window.location.hostname.includes('localhost') ? 
+        'http://localhost:3000' : 'https://manamingle.site';
+      console.log('Connecting to server:', serverUrl);
+      
+      socket = io(serverUrl, {
+        transports: ['websocket', 'polling'],
+        reconnection: true,
+        reconnectionAttempts: 5,
+        reconnectionDelay: 1000,
+        timeout: 15000,
+        query: {
+          coins: coins,
+          nickname: nickname,
+          type: isVideoMode ? 'video' : 'text',
+          badges: JSON.stringify(badges),
+          userId: userId
+        }
+      });
+      
+      // Core Socket Event Handlers
+      socket.on('connect', handleConnect);
+      socket.on('disconnect', handleDisconnect);
+      socket.on('connect_error', handleConnectError);
+      socket.on('error', handleSocketError);
+      
+      // Group Chat Events
+      socket.on('group-joined', handleGroupJoined);
+      socket.on('user-joined', handleUserJoined);
+      socket.on('user-left', handleUserLeft);
+      socket.on('room-full', handleRoomFull);
+      socket.on('online_count', handleOnlineCount);
+      socket.on('room-ended', handleRoomEnded);
+      socket.on('new-peer', async (data) => {
+        if (!isVideoMode || !data?.socketId || data.userId === userId) return;
+        if (peers[data.socketId]) return;
+        const panelNum = findAvailablePanel();
+        if (!panelNum) return;
+        socketToUser.set(data.socketId, data.userId);
+        assignVideoPanel(data.userId, panelNum, false, data.socketId);
+        await createPeerConnection(data.socketId);
+      });
+      
+      // Messaging Events
+      socket.on('receive_message', handleReceiveMessage);
+      socket.on('receive_media', handleReceiveMedia);
+      socket.on('message', handleReceiveMessage);
+      socket.on('user-typing', (data) => {
+        if (!data || data.roomId !== roomId || data.socketId === (socket && socket.id)) return;
+        const messagesEl = document.getElementById('messages');
+        if (!messagesEl) return;
+        const id = `typing-${data.socketId}`;
+        let el = document.getElementById(id);
+        if (data.isTyping) {
+          if (!el) {
+            el = document.createElement('div');
+            el.className = 'typing-indicator';
+            el.id = id;
+            const label = document.createElement('span');
+            label.textContent = (data.nickname || 'User') + ' is typing';
+            const dots = document.createElement('div');
+            dots.className = 'typing-dots';
+            dots.appendChild(document.createElement('span'));
+            dots.appendChild(document.createElement('span'));
+            dots.appendChild(document.createElement('span'));
+            el.appendChild(label);
+            el.appendChild(dots);
+            messagesEl.appendChild(el);
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+          }
+        } else {
+          if (el) el.remove();
+        }
+      });
+      
+      // WebRTC Events
+      socket.on('signal', handleWebRTCSignal);
+      socket.on('existing-peers', handleExistingPeers);
+      socket.on('special_emoji', handleSpecialEmoji);
+      
+      // User Data Events
+      socket.on('user-data-update', handleUserDataUpdate);
+      socket.on('badge-assigned', handleBadgeAssigned);
+      socket.on('coin-transfer', handleCoinTransfer);
+      socket.on('coin-update', handleCoinUpdate);
+      
+      // Admin Events
+      socket.on('admin-status', handleAdminStatus);
+      
+      // Report Events
+      socket.on('report-received', handleReportReceived);
+      socket.on('report_submitted', handleReportSubmitted);
+      
+    } catch (error) {
+      console.error('❌ Failed to initialize socket:', error);
+      showNotification('Failed to connect to server', 'error');
+      updateConnectionStatus('disconnected');
+    }
+  }
+
+  /* ===== SOCKET EVENT HANDLERS ===== */
+  function handleConnect() {
+    console.log('✅ Connected to server with ID:', socket.id);
+    userId = socket.id;
+    updateConnectionStatus('connected');
+    showNotification('Connected to server', 'success');
+    
+    // Store userId in localStorage
+    localStorage.setItem('userId', userId);
+    
+    // Join or create room
+    if (roomId) {
+      socket.emit('join-group', {
+        roomId: roomId,
+        mode: inviteMode,
+        nickname: nickname,
+        userId: userId,
+        coins: coins,
+        badges: badges[userId] || null,
+        isCreator: isVideoMode // Video creator can create
+      });
+    } else {
+      socket.emit('create-group', {
+        mode: inviteMode,
+        nickname: nickname,
+        userId: userId,
+        coins: coins,
+        badges: badges[userId] || null,
+        isCreator: true
+      });
+    }
+    
+    // Re-bind local panel to the new socket-based userId
+    if (isVideoMode) {
+      assignVideoPanel(userId, 1, true);
+      updateLocalVideoPanel();
+    }
+  }
+
+  function handleDisconnect() {
+    console.log('🔌 Disconnected from server');
+    updateConnectionStatus('disconnected');
+    showNotification('Disconnected from server', 'warning');
+  }
+
+  function handleConnectError(error) {
+    console.error('❌ Connection error:', error);
+    updateConnectionStatus('disconnected');
+    showNotification('Connection error. Please check your internet.', 'error');
+    if (!socketFallbackTried) {
+      try {
+        const opts = {
+          transports: ['websocket', 'polling'],
+          reconnection: true,
+          reconnectionAttempts: 5,
+          reconnectionDelay: 1000,
+          timeout: 15000,
+          query: {
+            coins: coins,
+            nickname: nickname,
+            type: isVideoMode ? 'video' : 'text',
+            badges: JSON.stringify(badges),
+            userId: userId
+          }
+        };
+        socket = io('https://manamingle.site', opts);
+        socketFallbackTried = true;
+        socket.on('connect', handleConnect);
+        socket.on('disconnect', handleDisconnect);
+        socket.on('connect_error', handleConnectError);
+        socket.on('error', handleSocketError);
+        socket.on('group-joined', handleGroupJoined);
+        socket.on('user-joined', handleUserJoined);
+        socket.on('user-left', handleUserLeft);
+        socket.on('room-full', handleRoomFull);
+        socket.on('online_count', handleOnlineCount);
+        socket.on('room-ended', handleRoomEnded);
+        socket.on('new-peer', async (data) => {
+          if (!isVideoMode || !data?.socketId || data.userId === userId) return;
+          if (peers[data.socketId]) return;
+          const panelNum = findAvailablePanel();
+          if (!panelNum) return;
+          socketToUser.set(data.socketId, data.userId);
+          assignVideoPanel(data.userId, panelNum, false, data.socketId);
+          await createPeerConnection(data.socketId);
+        });
+        socket.on('receive_message', handleReceiveMessage);
+        socket.on('receive_media', handleReceiveMedia);
+        socket.on('message', handleReceiveMessage);
+        socket.on('user-typing', (data) => {
+          if (!data || data.roomId !== roomId || data.socketId === (socket && socket.id)) return;
+          const messagesEl = document.getElementById('messages');
+          if (!messagesEl) return;
+          const id = `typing-${data.socketId}`;
+          let el = document.getElementById(id);
+          if (data.isTyping) {
+            if (!el) {
+              el = document.createElement('div');
+              el.className = 'typing-indicator';
+              el.id = id;
+              const label = document.createElement('span');
+              label.textContent = (data.nickname || 'User') + ' is typing';
+              const dots = document.createElement('div');
+              dots.className = 'typing-dots';
+              dots.appendChild(document.createElement('span'));
+              dots.appendChild(document.createElement('span'));
+              dots.appendChild(document.createElement('span'));
+              el.appendChild(label);
+              el.appendChild(dots);
+              messagesEl.appendChild(el);
+              messagesEl.scrollTop = messagesEl.scrollHeight;
+            }
+          } else {
+            if (el) el.remove();
+          }
+        });
+        socket.on('signal', handleWebRTCSignal);
+        socket.on('existing-peers', handleExistingPeers);
+        socket.on('special_emoji', handleSpecialEmoji);
+        socket.on('user-data-update', handleUserDataUpdate);
+        socket.on('badge-assigned', handleBadgeAssigned);
+      } catch (_) {}
+    }
+  }
+
+  function handleSocketError(error) {
+    console.error('❌ Socket error:', error);
+    showNotification('Connection error: ' + (error.message || 'Unknown error'), 'error');
+  }
+
+  function handleGroupJoined(data) {
+    console.log('✅ Joined group:', data);
+    roomId = data.roomId;
+    participantCount = data.participantCount || 1;
+    updateParticipantCount();
+    
+    // Update room title
+    document.getElementById('roomTitle').textContent = 
+      isVideoMode ? 'Video Group Chat' : 'Text Group Chat';
+    
+    // Update invite link display
+    const inviteUrl = `${window.location.origin}${window.location.pathname}?room=${roomId}&mode=${inviteMode}`;
+    const inviteDisplay = document.getElementById('inviteLinkDisplay');
+    inviteDisplay.textContent = `Room: ${roomId.substring(0, 8)}...`;
+    inviteDisplay.style.display = 'block';
+    inviteDisplay.title = inviteUrl;
+    
+    // Check admin status
+    isAdmin = data.isAdmin || false;
+    isCreator = data.isCreator || false;
+    
+    // Show admin button if admin
+    if (isAdmin || isCreator) {
+      const ab = document.getElementById('adminBtn');
+      if (ab) ab.style.display = 'flex';
+    }
+    
+    // Store our own data
+    userData.set(userId, {
+      nickname: nickname,
+      userId: userId,
+      coins: coins,
+      badges: badges[userId] || null,
+      isAdmin: isAdmin,
+      isCreator: isCreator
+    });
+    
+    // Broadcast user data
+    socket.emit('user-data', {
+      roomId: roomId,
+      userId: userId,
+      nickname: nickname,
+      coins: coins,
+      badges: badges[userId] || null,
+      isAdmin: isAdmin,
+      isCreator: isCreator
+    });
+    
+    showNotification(`Joined ${isVideoMode ? 'Video' : 'Text'} group`, 'success');
+    
+    // For video chat, request existing users and refresh briefly
+    if (isVideoMode && socket) {
+      setTimeout(() => {
+        socket.emit('request-peers', { roomId: roomId });
+      }, 500);
+      let refreshCount = 0;
+      const refreshInterval = setInterval(() => {
+        if (++refreshCount <= 5) {
+          socket.emit('request-peers', { roomId: roomId });
+        } else {
+          clearInterval(refreshInterval);
+        }
+      }, 2000);
+    }
+    
+    const ls = document.getElementById('groupLangSelect');
+    const tg = document.getElementById('groupTranslateToggle');
+    if (ls) ls.value = preferredLang;
+    if (tg) tg.classList.toggle('active', autoTranslate);
+  }
+
+  async function handleExistingPeers(data) {
+    if (!isVideoMode || !data.peers) return;
+    const connects = data.peers
+      .filter(p => p.userId !== userId && !peers[p.socketId])
+      .map(async p => {
+        const panelNum = findAvailablePanel();
+        if (!panelNum) return;
+        socketToUser.set(p.socketId, p.userId);
+        assignVideoPanel(p.userId, panelNum, false, p.socketId);
+        return createPeerConnection(p.socketId);
+      });
+    await Promise.all(connects);
+  }
+
+
+  function handleUserJoined(data) {
+    console.log('👤 User joined:', data);
+    participantCount = data.participantCount || participantCount + 1;
+    updateParticipantCount();
+    
+    // Store user data
+    userData.set(data.userId, {
+      nickname: data.nickname || 'Anonymous',
+      userId: data.userId,
+      coins: data.coins || 0,
+      badges: data.badges || null,
+      isAdmin: data.isAdmin || false,
+      isCreator: data.isCreator || false
+    });
+    
+    if (isTextMode) {
+      addSystemMessage(`${data.nickname || 'Anonymous'} joined`);
+    } else {
+      showNotification(`${data.nickname || 'Anonymous'} joined the group`, 'info');
+    }
+    
+    // For video chat
+    if (isVideoMode && data.userId !== userId) {
+      const panelNum = findAvailablePanel();
+      if (!panelNum) return;
+
+      assignVideoPanel(data.userId, panelNum, false);
+    }
+  }
+
+  function handleUserLeft(data) {
+    console.log('👋 User left:', data);
+    participantCount = data.participantCount || Math.max(1, participantCount - 1);
+    updateParticipantCount();
+    
+  if (isVideoMode) {
+    // Remove peer connection
+      let targetPeerId = null;
+      for (const [panelNum, panelData] of Object.entries(videoPanels)) {
+        if (panelData.userId === data.userId && panelData.peerId) {
+          targetPeerId = panelData.peerId;
+          break;
+        }
+      }
+      if (targetPeerId && peers[targetPeerId]) {
+        try { peers[targetPeerId].close(); } catch (e) { console.error('Error closing peer connection:', e); }
+        delete peers[targetPeerId];
+      }
+      
+      // Clear video panel
+      for (const [panelNum, panelData] of Object.entries(videoPanels)) {
+        if (panelData.userId === data.userId) {
+          panelData.userId = null;
+          panelData.peerId = null;
+          panelData.nickname = panelNum == 1 ? 'You' : 'Anonymous';
+          panelData.coins = 0;
+          panelData.badge = null;
+          if (panelData.videoElement) {
+            panelData.videoElement.remove();
+            panelData.videoElement = null;
+          }
+          updateVideoPanel(parseInt(panelNum));
+          break;
+        }
+      }
+    }
+    
+    // Remove from user data
+    userData.delete(data.userId);
+    
+    if (isTextMode) {
+      addSystemMessage(`${data.nickname || 'Anonymous'} left`);
+    } else {
+      showNotification(`${data.nickname || 'Anonymous'} left`, 'info');
+    }
+  }
+
+  function handleUserDataUpdate(data) {
+    console.log('📊 User data update:', data);
+    
+    // Update user data
+    if (userData.has(data.userId)) {
+      const user = userData.get(data.userId);
+      if (data.nickname) user.nickname = data.nickname;
+      if (data.coins !== undefined) user.coins = data.coins;
+      if (data.badges !== undefined) user.badges = data.badges;
+      if (data.isAdmin !== undefined) user.isAdmin = data.isAdmin;
+      if (data.isCreator !== undefined) user.isCreator = data.isCreator;
+      userData.set(data.userId, user);
+    }
+    
+    // Update video panel if in video mode
+    if (isVideoMode) {
+      for (const [panelNum, panelData] of Object.entries(videoPanels)) {
+        if (panelData.userId === data.userId) {
+          if (data.coins !== undefined) panelData.coins = data.coins;
+          updateVideoPanel(parseInt(panelNum));
+          break;
+        }
+      }
+    }
+  }
+
+  function handleBadgeAssigned(data) {
+    console.log('🎖️ Badge assigned:', data);
+    
+    // Update local badge data
+    if (data.userId === userId) {
+      badges[userId] = data.badge;
+      saveUserData();
+      
+      if (data.badge) {
+        showNotification(`You received the ${data.badge} badge!`, 'success');
+      } else {
+        showNotification('Your badge was removed', 'info');
+      }
+    }
+    
+    // Update user data
+    if (userData.has(data.userId)) {
+      const user = userData.get(data.userId);
+      user.badges = data.badge;
+      userData.set(data.userId, user);
+    }
+  }
+
+  function handleCoinTransfer(data) {
+    console.log('💰 Coin transfer received:', data);
+    
+    if (data.toUserId === userId) {
+      // We received coins
+      coins += data.amount;
+      updateCoinDisplay();
+      saveUserData();
+      
+      // Update our user data on server
+      socket.emit('user-data', {
+        roomId: roomId,
+        userId: userId,
+        nickname: nickname,
+        coins: coins,
+        badges: badges[userId] || null
+      });
+      
+      showNotification(`Received ${data.amount} coins from ${data.fromNickname || 'Anonymous'}!`, 'success');
+    }
+    
+    // Update sender's coins in UI if they're in our video panel
+    if (isVideoMode) {
+      for (const [panelNum, panelData] of Object.entries(videoPanels)) {
+        if (panelData.userId === data.fromUserId) {
+          panelData.coins -= data.amount;
+          updateVideoPanel(parseInt(panelNum));
+          break;
+        }
+      }
+    }
+  }
+
+  function handleCoinUpdate(data) {
+    console.log('💰 Coin update:', data);
+    
+    if (data.userId === userId) {
+      coins = data.coins;
+      updateCoinDisplay();
+      saveUserData();
+    }
+    
+    // Update in video panel if applicable
+    if (isVideoMode) {
+      for (const [panelNum, panelData] of Object.entries(videoPanels)) {
+        if (panelData.userId === data.userId) {
+          panelData.coins = data.coins;
+          updateVideoPanel(parseInt(panelNum));
+          break;
+        }
+      }
+    }
+  }
+
+  function handleAdminStatus(data) {
+    console.log('👑 Admin status:', data);
+    isAdmin = data.isAdmin || false;
+    
+    if (isAdmin) {
+      const ab = document.getElementById('adminBtn');
+      if (ab) ab.style.display = 'flex';
+      showNotification('You are now an admin', 'success');
+    } else {
+      const ab = document.getElementById('adminBtn');
+      if (ab) ab.style.display = 'none';
+    }
+  }
+
+  function handleReportReceived(data) {
+    console.log('🚨 Report received:', data);
+    if (isAdmin || isCreator) {
+      showNotification(`New report: ${data.reason} from ${data.reporterNickname}`, 'warning');
+    }
+  }
+
+  function handleRoomFull(data) {
+  const max = data.max || (inviteMode === "group_text" ? 6 : 4);
+  showNotification(`Room is full (max ${max} users)`, "error");
+  goBack();
+}
+
+  function handleReportSubmitted() {
+    showNotification('Report submitted successfully', 'success');
+  }
+
+function handleReceiveMessage(data) {
+  if (data.roomId !== roomId) return;
+  const messageId = String(data.messageId || `${data.senderId}_${data.timestamp || Date.now()}`);
+  if (receivedMessageIds.has(messageId)) return;
+  receivedMessageIds.add(messageId);
+  const type = data.senderId === userId ? "me" : "other";
+  translateAndAddMessage(data.message, type, data.nickname || "Anonymous", messageId);
+}
+
+function handleMessage(data) {
+  if (!isTextMode || data.roomId !== roomId) return;
+  
+  const messageId = String(data.messageId || `${data.senderId}_${data.timestamp || Date.now()}`);
+  if (receivedMessageIds.has(messageId)) return;
+  
+  receivedMessageIds.add(messageId);
+  
+  const type = data.senderId === userId ? "me" : "other";
+  translateAndAddMessage(data.message, type, data.senderName || "Anonymous", messageId);
+}
+
+async function translateAndAddMessage(text, type, sender, messageId) {
+  let msg = text;
+  if (isTextMode && autoTranslate && preferredLang && preferredLang !== 'off') {
+    try {
+      const r = await fetch('/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: msg, source: 'auto', target: preferredLang })
+      });
+      if (r.ok) {
+        const j = await r.json();
+        if (j.text) msg = j.text;
+      }
+    } catch (_) {}
+  }
+  addMessage(msg, type, sender, messageId);
+}
+
+function cleanupPeer(peerId) {
+  if (!peers[peerId]) return;
+
+  try { peers[peerId].close(); } catch {}
+  delete peers[peerId];
+
+  for (const [panelNum, panelData] of Object.entries(videoPanels)) {
+    if (panelData.peerId === peerId) {
+      if (panelData.stream) {
+        try { panelData.stream.getTracks().forEach(t => t.stop()); } catch {}
+      }
+      panelData.userId = null;
+      panelData.peerId = null;
+      panelData.stream = null;
+      if (panelData.videoElement) {
+        try { panelData.videoElement.srcObject = null; } catch {}
+        panelData.videoElement.remove();
+        panelData.videoElement = null;
+      }
+      const container = panelData.element && panelData.element.querySelector('.video-container');
+      if (container) container.innerHTML = '';
+      panelData.nickname = panelNum == 1 ? 'You' : 'Anonymous';
+      panelData.coins = 0;
+      panelData.badge = null;
+      updateVideoPanel(Number(panelNum));
+      break;
+    }
+  }
+}
+
+function handleReceiveMedia(data) {
+  if (!data.mediaId) return;
+
+  if (!incomingMedia[data.mediaId]) {
+    incomingMedia[data.mediaId] = {
+      chunks: new Array(data.totalChunks),
+      received: 0,
+      totalChunks: data.totalChunks,
+      meta: data
+    };
+  }
+  const media = incomingMedia[data.mediaId];
+  if (media.chunks[data.chunkIndex] === undefined) {
+    media.chunks[data.chunkIndex] = data.chunk;
+    media.received++;
+  }
+  if (media.received === data.totalChunks) {
+    const allPresent = media.chunks.every(c => c !== undefined);
+    if (!allPresent) {
+      delete incomingMedia[data.mediaId];
+      return;
+    }
+    const blob = new Blob(media.chunks);
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      displayMedia({
+        ...media.meta,
+        dataUrl: reader.result
+      });
+    };
+
+    reader.readAsDataURL(blob);
+    delete incomingMedia[data.mediaId];
+  }
+}
+
+async function handleWebRTCSignal(data) {
+  if (data.from === userId) return;
+  console.log('📡 Signal received:', data.sdp && data.sdp.type, 'from:', data.from);
+
+  let pc = peers[data.from];
+  if (!pc) pc = await createPeerConnection(data.from);
+
+  /* ===== SDP HANDLING ===== */
+  if (data.sdp) {
+    await pc.setRemoteDescription(
+      new RTCSessionDescription(data.sdp)
+    );
+
+    // ✅ APPLY QUEUED ICE AFTER SDP
+    if (pendingCandidates[data.from]) {
+      const candidates = pendingCandidates[data.from];
+      delete pendingCandidates[data.from];
+      await Promise.allSettled(
+        candidates.map(c =>
+          pc.addIceCandidate(new RTCIceCandidate(c)).catch(e => console.warn("Queued ICE add failed:", e))
+        )
+      );
+    }
+
+    // ANSWER ONLY IF OFFER
+    if (data.sdp.type === "offer") {
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+
+      socket.emit("signal", {
+        roomId,
+        from: userId,
+        to: data.from,
+        sdp: answer
+      });
+    }
+  }
+
+  /* ===== ICE HANDLING ===== */
+  if (data.candidate) {
+    if (pc.remoteDescription) {
+      try {
+        await pc.addIceCandidate(
+          new RTCIceCandidate(data.candidate)
+        );
+      } catch (e) {
+        console.warn("ICE add failed:", e);
+      }
+    } else {
+      pendingCandidates[data.from] ??= [];
+      pendingCandidates[data.from].push(data.candidate);
+    }
+  }
+}
+
+  /* ===== WEBRTC FUNCTIONS ===== */
+  async function createPeerConnection(peerId) {
+  if (peers[peerId]) return peers[peerId];
+
+  const ice = await loadIceServers();
+
+  const pc = new RTCPeerConnection({
+    iceServers: ice.iceServers,
+    iceCandidatePoolSize: 10,
+    iceTransportPolicy: "all"
+  });
+  console.log('🔌 Creating peer connection:', peerId);
+/* ================= TURN BANDWIDTH LIMIT (PRODUCTION) ================= */
+pc.addEventListener("icecandidateerror", (e) => {
+  console.warn("ICE candidate error:", e);
+});
+
+/* 🔥 LIMIT OUTGOING BITRATE (SAVES TURN $$$) will be applied per-sender below */
+
+  peers[peerId] = pc;
+  pc.remoteStream = new MediaStream();
+
+  // Add local tracks
+  if (localStream) {
+    localStream.getTracks().forEach(track => {
+      const sender = pc.addTrack(track, localStream);
+      setTimeout(() => {
+        const params = sender.getParameters();
+        if (!params.encodings || params.encodings.length === 0) {
+          params.encodings = [{}];
+        }
+        params.encodings[0].maxBitrate = track.kind === "video" ? 300_000 : 48_000;
+        sender.setParameters(params).catch(() => {});
+      }, 100);
+    });
+  }
+
+  // Handle remote tracks
+  pc.ontrack = e => {
+  console.log('🎥 Track received:', peerId, e.track.kind, 'stream:', e.streams && e.streams[0] ? e.streams[0].id : 'none');
+  if (!pc.remoteStream) {
+    pc.remoteStream = new MediaStream();
+  }
+
+  e.streams[0].getTracks().forEach(track => {
+    pc.remoteStream.addTrack(track);
+  });
+
+  updateRemotePanelWithStream(peerId, pc.remoteStream);
+};
+
+  // ICE candidates
+  pc.onicecandidate = e => {
+    if (e.candidate) {
+      socket.emit("signal", {
+        roomId,
+        to: peerId,
+        candidate: e.candidate,
+        from: userId
+      });
+    }
+  };
+
+  // Cleanup
+  pc.onconnectionstatechange = () => {
+  const state = pc.connectionState;
+  console.log("PC state:", peerId, state);
+
+  // 🚫 DO NOT RESTART ICE IF CONNECTED
+  if (state === "connected") {
+    updateRemotePanelWithStream(peerId, pc.remoteStream);
+    return;
+  }
+
+  // ⚠️ Avoid aggressive cleanup on temporary drops
+  if (state === "disconnected") {
+    setTimeout(() => {
+      if (pc.connectionState === "disconnected") {
+        cleanupPeer(peerId);
+      }
+    }, 4000);
+    return;
+  }
+
+  if (state === "failed" || state === "closed") {
+    cleanupPeer(peerId);
+  }
+};
+
+  // CREATE OFFER (ONLY ONE SIDE)
+  if (shouldCreateOffer(userId, peerId)) {
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+
+    socket.emit("signal", {
+  roomId,
+  from: userId,
+  to: peerId,
+  sdp: offer
+});
+
+  }
+
+  return pc;
+}
+
+// Helper: update panel with a stream immediately
+function updateRemotePanelWithStream(peerId, stream) {
+  let assigned = false;
+  for (const [panelNum, panelData] of Object.entries(videoPanels)) {
+    if (panelData.peerId === peerId) {
+      panelData.stream = stream;
+      updateVideoPanel(Number(panelNum));
+      assigned = true;
+      break;
+    }
+  }
+  if (!assigned) {
+    const panelNum = findAvailablePanel();
+    if (panelNum) {
+      const mappedUserId = socketToUser.get(peerId) || `peer_${peerId}`;
+      assignVideoPanel(mappedUserId, panelNum, false, peerId);
+      videoPanels[panelNum].peerId = peerId;
+      videoPanels[panelNum].stream = stream;
+      updateVideoPanel(panelNum);
+    }
+  }
+}
+
+  /* ===== VIDEO FUNCTIONS ===== */
+  async function startCamera() {
+    try {
+      let constraints = {
+        video: {
+          width: { ideal: 640 },
+          height: { ideal: 480 },
+          frameRate: { ideal: 24 },
+          facingMode: 'user'
+        },
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
+      };
+      try {
+        localStream = await navigator.mediaDevices.getUserMedia(constraints);
+      } catch (_) {
+        constraints = { video: true, audio: true };
+        try {
+          localStream = await navigator.mediaDevices.getUserMedia(constraints);
+        } catch (__ ) {
+          constraints = { video: true, audio: false };
+          localStream = await navigator.mediaDevices.getUserMedia(constraints);
+        }
+      }
+      const v = localStream.getVideoTracks()[0];
+      if (v) v.enabled = true;
+      
+      console.log('Camera started successfully');
+      initActiveSpeaker();
+      updateLocalVideoPanel();
+      
+      return localStream;
+      
+    } catch (error) {
+      console.error('Error accessing camera:', error);
+      showNotification('Failed to access camera. Please allow camera access.', 'error');
+      throw error;
+    }
+  }
+
+  function initActiveSpeaker() {
+    if (!localStream || speakerInterval) return;
+    
+    try {
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const analyser = audioContext.createAnalyser();
+      const source = audioContext.createMediaStreamSource(localStream);
+      source.connect(analyser);
+      analyser.fftSize = 128;
+      analyser.smoothingTimeConstant = 0.8;
+      
+      const dataArray = new Uint8Array(analyser.frequencyBinCount);
+      
+      speakerInterval = setInterval(() => {
+        analyser.getByteFrequencyData(dataArray);
+        const average = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+        
+        // Highlight local video panel when speaking
+        for (const [panelNum, panelData] of Object.entries(videoPanels)) {
+          if (panelData.userId === userId) {
+            const panel = document.getElementById(`video-panel-${panelNum}`);
+            if (panel) {
+              panel.classList.toggle('speaking', average > 10);
+            }
+            break;
+          }
+        }
+        
+        // Check remote users speaking
+        for (const [panelNum, panelData] of Object.entries(videoPanels)) {
+          if (panelData.userId && panelData.userId !== userId) {
+            const panel = document.getElementById(`video-panel-${panelNum}`);
+            if (panel && panelData.stream) {
+              // In a real app, you would analyze remote audio streams
+              // This is a simplified version
+            }
+          }
+        }
+      }, 300);
+    } catch (error) {
+      console.error('Error initializing audio analysis:', error);
+    }
+  }
+
+  /* ===== RECORDING FUNCTIONS ===== */
+  function enableRecordingFeature() {
+    isRecordingEnabled = true;
+    const recordBtn = document.getElementById('recordBtn');
+    recordBtn.classList.add('enabled');
+    recordBtn.title = 'Click to start recording';
+    recordBtn.innerHTML = '<span>⏺️</span><span>Record</span>';
+    
+    console.log('Recording feature enabled');
+  }
+
+  function toggleRecording() {
+    if (!isRecordingEnabled) {
+      openPaymentModal();
+      return;
+    }
+    
+    if (isRecording) {
+      stopRecording();
+    } else {
+      startRecording();
+    }
+  }
+
+  async function startRecording() {
+    try {
+      if (!isVideoMode) {
+        showNotification('Recording is available in video chat only', 'error');
+        return;
+      }
+
+      const gridEl = document.getElementById('videoGrid');
+      const gridRect = gridEl ? gridEl.getBoundingClientRect() : { width: 960, height: 720 };
+      const canvasWidth = Math.max(640, Math.floor(gridRect.width));
+      const canvasHeight = Math.max(360, Math.floor(gridRect.height));
+      recordingCanvas.width = canvasWidth;
+      recordingCanvas.height = canvasHeight;
+
+      const cellW = Math.floor(canvasWidth / 2);
+      const cellH = Math.floor(canvasHeight / 2);
+
+      const positions = [
+        { x: 0, y: 0 },            // panel 1
+        { x: cellW, y: 0 },        // panel 2
+        { x: 0, y: cellH },        // panel 3
+        { x: cellW, y: cellH }     // panel 4
+      ];
+
+      const getVideoEl = (panelNum) => {
+        const data = videoPanels[panelNum];
+        return data && data.videoElement ? data.videoElement : null;
+      };
+
+      const draw = () => {
+        recordingContext.fillStyle = '#000';
+        recordingContext.fillRect(0, 0, canvasWidth, canvasHeight);
+        for (let i = 1; i <= 4; i++) {
+          const v = getVideoEl(i);
+          const pos = positions[i - 1];
+          if (v && v.readyState >= 2) {
+            try {
+              recordingContext.drawImage(v, pos.x, pos.y, cellW, cellH);
+            } catch (_) {}
+          } else {
+            // placeholder for empty panel
+            recordingContext.fillStyle = '#111';
+            recordingContext.fillRect(pos.x, pos.y, cellW, cellH);
+            recordingContext.fillStyle = '#888';
+            recordingContext.font = '16px sans-serif';
+            recordingContext.fillText('Empty', pos.x + 10, pos.y + 24);
+          }
+        }
+        recordingDrawRAF = requestAnimationFrame(draw);
+      };
+      draw();
+
+      const videoCompositeStream = recordingCanvas.captureStream(30);
+
+      // Mix audio from all available streams into one track
+      let finalStream = new MediaStream(videoCompositeStream.getVideoTracks());
+      try {
+        if (window.AudioContext || window.webkitAudioContext) {
+          recordingAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+          recordingAudioDestination = recordingAudioContext.createMediaStreamDestination();
+          for (let i = 1; i <= 4; i++) {
+            const stream = videoPanels[i].stream;
+            if (stream && stream.getAudioTracks && stream.getAudioTracks().length > 0) {
+              try {
+                const source = recordingAudioContext.createMediaStreamSource(stream);
+                source.connect(recordingAudioDestination);
+              } catch (_) {}
+            }
+          }
+          recordingAudioDestination.stream.getAudioTracks().forEach(t => finalStream.addTrack(t));
+        }
+      } catch (_) {}
+
+      // Start media recorder on composite stream
+      const options = { mimeType: 'video/webm;codecs=vp9' };
+      mediaRecorder = new MediaRecorder(finalStream, options);
+      
+      recordedChunks = [];
+      
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          recordedChunks.push(event.data);
+        }
+      };
+      
+      mediaRecorder.onstop = () => {
+        if (recordingDrawRAF) {
+          cancelAnimationFrame(recordingDrawRAF);
+          recordingDrawRAF = null;
+        }
+        try { recordingAudioContext && recordingAudioContext.close(); } catch (_) {}
+        recordingAudioContext = null;
+        recordingAudioDestination = null;
+
+        const blob = new Blob(recordedChunks, { type: 'video/webm' });
+        const url = URL.createObjectURL(blob);
+        
+        // Create download link
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `manamingle-recording-${Date.now()}.webm`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        
+        URL.revokeObjectURL(url);
+        
+        showNotification('Recording saved!', 'success');
+      };
+      
+      // Start recording
+      mediaRecorder.start(1000); // Collect data every second
+      isRecording = true;
+      
+      // Update UI
+      document.getElementById('recordBtn').classList.add('recording');
+      document.getElementById('recordBtn').innerHTML = '<span>⏹️</span><span>Stop</span>';
+      document.getElementById('recordingIndicator').style.display = 'flex';
+      
+      showNotification('Recording started', 'success');
+      
+    } catch (error) {
+      console.error('Error starting recording:', error);
+      showNotification('Failed to start recording', 'error');
+    }
+  }
+
+  function stopRecording() {
+    if (!mediaRecorder || !isRecording) return;
+    
+    mediaRecorder.stop();
+    isRecording = false;
+    if (recordingDrawRAF) {
+      cancelAnimationFrame(recordingDrawRAF);
+      recordingDrawRAF = null;
+    }
+    try { recordingAudioContext && recordingAudioContext.close(); } catch (_) {}
+    recordingAudioContext = null;
+    recordingAudioDestination = null;
+    
+    // Update UI
+    document.getElementById('recordBtn').classList.remove('recording');
+    document.getElementById('recordBtn').innerHTML = '<span>⏺️</span><span>Record</span>';
+    document.getElementById('recordingIndicator').style.display = 'none';
+    
+    showNotification('Recording stopped', 'info');
+  }
+
+  /* ===== MESSAGING FUNCTIONS ===== */
+  function sendMessage() {
+  const input = document.getElementById("msgInput");
+  const text = input.value.trim();
+  if (!text || !socket || !roomId) return;
+
+  const messageId = `${userId}_${Date.now()}`;
+
+  socket.emit("send_message", {
+    roomId,
+    message: text,
+    nickname,
+    userId,
+    messageId
+  });
+
+  // Add message locally immediately
+  addMessage(text, 'me', nickname, messageId);
+  
+  input.value = "";
+}
+
+function addMessage(text, type, sender, messageId) {
+  const messages = document.getElementById("messages");
+  if (!messages) return;
+
+  const div = document.createElement("div");
+  div.className = `msg ${type} message-slide`;
+  if (messageId) {
+    div.setAttribute('data-msg-id', String(messageId));
+    receivedMessageIds.add(String(messageId));
+  }
+
+  const header = document.createElement("div");
+  header.className = `nickname-display ${type}`;
+  const nameSpan = document.createElement('span');
+  nameSpan.textContent = sender;
+  const sentimentSpan = document.createElement('span');
+  sentimentSpan.className = 'message-sentiment';
+  sentimentSpan.textContent = computeSentiment(text);
+  header.appendChild(nameSpan);
+  header.appendChild(sentimentSpan);
+
+  const body = document.createElement("div");
+  body.textContent = text;
+  body.style.marginTop = "4px";
+  body.style.wordBreak = "break-word";
+  body.style.whiteSpace = "pre-wrap";
+
+  const time = document.createElement("div");
+  time.className = "msg-time";
+  time.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  const actions = document.createElement('div');
+  actions.style.display = 'flex';
+  actions.style.alignItems = 'center';
+  actions.style.gap = '8px';
+  const reactBtn = document.createElement('button');
+  reactBtn.className = 'reaction-btn';
+  reactBtn.textContent = '😊';
+  const reactMenu = document.createElement('div');
+  reactMenu.className = 'reaction-menu';
+  ['👍','❤️','😂','🔥','👏'].forEach(e => {
+    const b = document.createElement('button');
+    b.className = 'reaction-option';
+    b.textContent = e;
+    reactMenu.appendChild(b);
+  });
+  reactBtn.onclick = (e) => {
+    e.stopPropagation();
+    reactMenu.style.display = reactMenu.style.display === 'flex' ? 'none' : 'flex';
+  };
+  reactMenu.querySelectorAll('.reaction-option').forEach(opt => {
+    opt.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      reactMenu.style.display = 'none';
+      const emoji = opt.textContent || '👍';
+      const id = div.getAttribute('data-msg-id');
+      if (socket && roomId && id) {
+        socket.emit('message_reaction', { roomId, messageId: id, emoji });
+      }
+    });
+  });
+
+  actions.appendChild(reactBtn);
+  actions.appendChild(reactMenu);
+
+  div.appendChild(header);
+  div.appendChild(body);
+  div.appendChild(time);
+  div.appendChild(actions);
+  messages.appendChild(div);
+  scrollMessagesToBottom();
+}
+
+function addSystemMessage(text) {
+  const messagesContainer = document.getElementById('messages');
+  if (!messagesContainer) return;
+  
+  const div = document.createElement('div');
+  div.className = 'msg system';
+  div.textContent = text;
+  
+  messagesContainer.appendChild(div);
+  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+function computeSentiment(text) {
+  const pos = ['good','great','awesome','nice','love','happy','fun','cool','amazing','wonderful'];
+  const neg = ['bad','sad','angry','hate','terrible','awful','boring','annoying','worst'];
+  const lower = String(text || '').toLowerCase();
+  let score = 0;
+  for (const w of pos) { if (lower.includes(w)) score += 1; }
+  for (const w of neg) { if (lower.includes(w)) score -= 1; }
+  if (score >= 2) return '😊';
+  if (score === 1) return '🙂';
+  if (score === 0) return '😐';
+  if (score === -1) return '🙁';
+  return '😠';
+}
+
+function scrollMessagesToBottom() {
+  const messages = document.getElementById("messages");
+  if (!messages) return;
+  requestAnimationFrame(() => {
+    messages.scrollTop = messages.scrollHeight;
+  });
+}
+
+  /* ===== AI MODERATION ===== */
+  async function initAI() {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const overrideUrl = params.get('nsfwModel');
+      const sizeParam = parseInt(params.get('nsfwSize') || '', 10);
+      const options = {};
+      if (!isNaN(sizeParam)) options.size = sizeParam;
+
+      console.log("Loading NSFW Model...");
+      const modelPromise = overrideUrl ? nsfwjs.load(overrideUrl, options) : nsfwjs.load();
+      nsfwModel = await modelPromise;
+      console.log("NSFW Model Loaded");
+      startModerationLoop();
+    } catch (err) {
+      console.error("Failed to load NSFW model:", err);
+    }
+  }
+
+  function startModerationLoop() {
+    if(moderationInterval) clearTimeout(moderationInterval);
+    const delay = document.hidden ? 6000 : 3000;
+    moderationInterval = setTimeout(checkContent, delay);
+  }
+
+  async function checkContent() {
+    if (!nsfwModel || !isModerationActive || !localStream) {
+      const delay = document.hidden ? 6000 : 3000;
+      moderationInterval = setTimeout(checkContent, delay);
+      return;
+    }
+    
+    // Find local video element
+    let localVideoElement = null;
+    for (const [panelNum, data] of Object.entries(videoPanels)) {
+      if (data.userId === userId && data.videoElement) {
+        localVideoElement = data.videoElement;
+        break;
+      }
+    }
+    
+    if (!localVideoElement) return;
+
+    try {
+      await new Promise((r) => requestAnimationFrame(r));
+      // Classify the image
+      const predictions = await nsfwModel.classify(localVideoElement);
+      
+      // Check for Porn or Hentai with high probability
+      const nsfw = predictions.find(p => (p.className === 'Porn' || p.className === 'Hentai') && p.probability > 0.90);
+      
+      if (nsfw) {
+        console.warn("NSFW Detected:", nsfw);
+        if (socket) {
+          socket.emit('ai_moderation_flag', {
+            className: nsfw.className,
+            probability: nsfw.probability,
+            roomId: roomId
+          });
+        }
+      }
+    } catch (e) {
+      // Video might not be ready yet or other error
+      // console.debug("AI Check skipped:", e);
+    }
+    const delay = document.hidden ? 6000 : 3000;
+    moderationInterval = setTimeout(checkContent, delay);
+  }
+
+  /* ===== REPORT SYSTEM ===== */
+  function openReportModal(userId) {
+    reportTarget = userId;
+    const targetName = userData.get(userId)?.nickname || 'Anonymous';
+    document.getElementById('reportTarget').textContent = `Reporting: ${targetName}`;
+    document.getElementById('reportModal').style.display = 'flex';
+  }
+
+  function submitReport() {
+    if (!reportTarget || !selectedReportReason) {
+      showNotification('Please select a reason for reporting', 'error');
+      return;
+    }
+    
+    const description = document.getElementById('reportDescription').value.trim();
+    
+    // Updated to match server expectation: { reportedUserId, reason, roomId, timestamp }
+    socket.emit('report_user', {
+      reportedUserId: reportTarget,
+      reason: selectedReportReason,
+      description: description, // Sending extra data is fine
+      roomId: roomId,
+      timestamp: Date.now()
+    });
+    
+    // Close modal immediately, confirmation comes from server
+    closeReportModal();
+  }
+
+  function closeReportModal() {
+    document.getElementById('reportModal').style.display = 'none';
+    reportTarget = null;
+    selectedReportReason = null;
+    document.getElementById('reportDescription').value = '';
+    document.querySelectorAll('.report-option').forEach(opt => opt.classList.remove('selected'));
+  }
+
+  function blockUser(targetUserId) {
+    if (!confirm('Are you sure you want to block this user? They will be reported and hidden.')) return;
+
+    // 1. Report as blocked (server counts this towards auto-ban)
+    socket.emit('report_user', {
+      reportedUserId: targetUserId,
+      reason: 'Blocked',
+      description: 'User locally blocked by peer',
+      roomId: roomId,
+      timestamp: Date.now()
+    });
+
+    // 2. Local hide
+    // Find panel with this user
+    for (const [panelNum, data] of Object.entries(videoPanels)) {
+      if (data.userId === targetUserId) {
+        // Clear video
+        if (data.videoElement) {
+            data.videoElement.srcObject = null;
+            data.videoElement.remove();
+            data.videoElement = null;
+        }
+        
+        // Show blocked placeholder
+        const panel = data.element;
+        const container = panel.querySelector('.video-container');
+        container.innerHTML = '<div style="display:flex;justify-content:center;align-items:center;height:100%;background:#000;color:#fff;flex-direction:column;"><span>🚫</span><span>Blocked</span></div>';
+        
+        // Mute audio if peer exists
+        if (peers[targetUserId]) {
+            peers[targetUserId].getReceivers().forEach(receiver => {
+                if(receiver.track) receiver.track.enabled = false;
+            });
+        }
+        break;
+      }
+    }
+    
+    showNotification('User blocked and reported.', 'success');
+  }
+
+  /* ===== PAYMENT GATEWAY ===== */
+  function openPaymentModal() {
+    if (!paymentEnabledFlag) {
+      showNotification('Payments are currently disabled by admin', 'warning');
+      return;
+    }
+    document.getElementById('paymentModal').style.display = 'flex';
+  }
+
+  function selectPaymentOption(option) {
+    selectedPaymentOption = option;
+    
+    document.querySelectorAll('.payment-option').forEach(opt => {
+      opt.classList.remove('selected');
+    });
+    option.classList.add('selected');
+    
+    document.getElementById('confirmPaymentBtn').disabled = false;
+  }
+
+  function confirmPayment() {
+    if (!selectedPaymentOption) return;
+    
+    const amount = parseFloat(selectedPaymentOption.dataset.amount);
+    const duration = parseInt(selectedPaymentOption.dataset.duration);
+    
+    // In a real app, you would integrate with a payment gateway like Stripe
+    // For this demo, we'll simulate the payment
+    showNotification(`Processing payment of $${amount}...`, 'info');
+    
+    // Simulate payment processing
+    setTimeout(() => {
+      // Enable premium features (recording & screen share)
+      isRecordingEnabled = true;
+      hasPremiumAccess = true;
+      recordingEndTime = Date.now() + (duration * 60 * 60 * 1000);
+      
+      // Save to localStorage
+      localStorage.setItem('recordingEnabled', JSON.stringify({
+        enabled: true,
+        endTime: recordingEndTime,
+        amountPaid: amount,
+        duration: duration
+      }));
+      
+      // Update UI
+      enableRecordingFeature();
+      
+      showNotification(`Payment successful! Premium features enabled for ${duration/24} days!`, 'success');
+      closePaymentModal();
+    }, 1500);
+  }
+
+  function closePaymentModal() {
+    document.getElementById('paymentModal').style.display = 'none';
+    selectedPaymentOption = null;
+    document.querySelectorAll('.payment-option').forEach(opt => opt.classList.remove('selected'));
+    document.getElementById('confirmPaymentBtn').disabled = true;
+  }
+
+  /* ===== ADMIN SYSTEM ===== */
+  function openAdminModal() { return; }
+
+  function selectAdminUser() { return; }
+
+  function selectAdminBadge() { return; }
+
+  function saveBadges() { return; }
+
+  /* ===== MEDIA UPLOAD FUNCTIONS ===== */
+  function showMediaTypeModal() {
+    // Only in text mode
+    if (!isTextMode) return;
+    
+    document.getElementById('modalCoinBalance').textContent = coins;
+    document.getElementById('insufficientCoins').style.display = 'none';
+    
+    // Check if user has enough coins
+    if (coins < 30) {
+      document.getElementById('insufficientCoins').style.display = 'block';
+      document.getElementById('insufficientCoins').textContent = 'Minimum 30 coins required!';
+    }
+    
+    document.getElementById('mediaTypeModal').style.display = 'flex';
+  }
+
+  function selectMediaType(type) {
+    selectedMediaType = type;
+    const cost = type === 'photo' ? 30 : 50;
+    
+    document.querySelectorAll('.media-type-btn').forEach(btn => {
+      btn.classList.remove('selected');
+    });
+    event.target.closest('.media-type-btn').classList.add('selected');
+    
+    // Check if user has enough coins
+    if (coins >= cost) {
+      document.getElementById('proceedMediaBtn').disabled = false;
+      document.getElementById('proceedMediaBtn').textContent = `Select ${type === 'photo' ? 'Photo' : 'Video'} (${cost} coins)`;
+    } else {
+      document.getElementById('proceedMediaBtn').disabled = true;
+      document.getElementById('insufficientCoins').style.display = 'block';
+      document.getElementById('insufficientCoins').textContent = `Need ${cost} coins!`;
+    }
+  }
+
+  function proceedToMediaUpload() {
+  if (!selectedMediaType) return;
+
+  const cost = selectedMediaType === "photo" ? 30 : 50;
+
+  if (coins < cost) {
+    showNotification("Not enough coins!", "error");
+    return;
+  }
+
+  mediaUploadCost = cost;
+  document.getElementById("mediaTypeModal").style.display = "none";
+  document.getElementById("mediaUploadModal").style.display = "flex";
+
+  document.getElementById("mediaUploadTitle").textContent =
+    `Upload ${selectedMediaType === "photo" ? "Photo" : "5s Video"}`;
+
+  document.getElementById("mediaUploadCost").textContent =
+    `Cost: ${cost} coins (will be deducted)`;
+}
+
+
+  function browseMediaFiles() {
+  const input = document.getElementById("mediaFileInput");
+  input.accept = selectedMediaType === "photo" ? "image/*" : "video/*";
+  input.click();
+}
+
+
+function handleMediaFileSelect(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  selectedMediaFile = file;
+
+  if (selectedMediaType === "photo") {
+    if (!file.type.startsWith("image/")) {
+      showNotification("Please select an image file", "error");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      showNotification("Image too large! Max 5MB", "error");
+      return;
+    }
+  } else {
+    if (!file.type.startsWith("video/")) {
+      showNotification("Please select a video file", "error");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      showNotification("Video too large! Max 10MB", "error");
+      return;
+    }
+  }
+
+  const previewContainer = document.getElementById("mediaPreviewContainer");
+  const previewImage = document.getElementById("uploadPreview");
+  const previewVideo = document.getElementById("uploadVideoPreview");
+  const fileName = document.getElementById("selectedFileName");
+
+  previewContainer.style.display = "block";
+  previewImage.style.display = "none";
+  previewVideo.style.display = "none";
+
+  if (selectedMediaType === "photo") {
+    const reader = new FileReader();
+    reader.onload = e => {
+      previewImage.src = e.target.result;
+      previewImage.style.display = "block";
+    };
+    reader.readAsDataURL(file);
+  } else {
+    previewVideo.src = URL.createObjectURL(file);
+    previewVideo.style.display = "block";
+  }
+
+  fileName.textContent = `${file.name} (${formatFileSize(file.size)})`;
+  document.getElementById("confirmUploadBtn").disabled = false;
+}
+function sendMediaInChunks(file, mediaType, cost) {
+  const mediaId = `${userId}_${Date.now()}`;
+  const reader = new FileReader();
+
+  reader.onload = () => {
+    const buffer = reader.result;
+    const totalChunks = Math.ceil(buffer.byteLength / MEDIA_CHUNK_SIZE);
+
+    for (let i = 0; i < totalChunks; i++) {
+      const chunk = buffer.slice(
+        i * MEDIA_CHUNK_SIZE,
+        (i + 1) * MEDIA_CHUNK_SIZE
+      );
+
+      socket.emit("media_chunk", {
+        roomId,
+        mediaId,
+        chunkIndex: i,
+        totalChunks,
+        chunk,
+        mediaType,
+        fileName: file.name,
+        fileSize: file.size,
+        senderId: userId,
+        nickname,
+        cost,
+        badges: badges[userId] || null
+      });
+    }
+  };
+
+  reader.readAsArrayBuffer(file);
+}
+
+
+function confirmMediaUpload() {
+  if (!selectedMediaFile || !socket || !roomId) return;
+
+  const cost = selectedMediaType === "photo" ? 30 : 50;
+
+  if (coins < cost) {
+    showNotification("Not enough coins!", "error");
+    return;
+  }
+
+  coins -= cost;
+  updateCoinDisplay();
+  saveUserData();
+  showCoinAnimation(cost);
+
+  socket.emit("coins-deducted", {
+    roomId,
+    userId,
+    amount: cost,
+    newBalance: coins,
+    type: selectedMediaType
+  });
+
+  socket.emit("user-data", {
+    roomId,
+    userId,
+    nickname,
+    coins,
+    badges: badges[userId] || null
+  });
+
+  sendMediaInChunks(selectedMediaFile, selectedMediaType, cost);
+
+  showNotification(
+    `${selectedMediaType === "photo" ? "Photo" : "Video"} sent! -${cost} coins`,
+    "success"
+  );
+
+  closeMediaUploadModal();
+}
+
+function displayMedia(data, type = null) {
+    const messages = document.getElementById('messages');
+    if (!messages) return;
+    
+    const div = document.createElement('div');
+    div.className = 'msg ' + (type || (data.senderId === userId ? 'me' : 'other')) + ' media-upload-animation';
+    div.setAttribute('data-media-id', String(data.mediaId || ''));
+    
+    const header = document.createElement('div');
+    header.className = 'nickname-display ' + (type || (data.senderId === userId ? 'me' : 'other'));
+    
+    const senderSpan = document.createElement('span');
+    senderSpan.textContent = data.nickname || 'Anonymous';
+    senderSpan.style.fontWeight = 'bold';
+    header.appendChild(senderSpan);
+    
+    // Add badge if available
+    if (data.senderId && badges[data.senderId]) {
+      const badgeSpan = document.createElement('span');
+      badgeSpan.className = `user-badge badge-${badges[data.senderId]}`;
+      badgeSpan.textContent = badges[data.senderId];
+      header.appendChild(badgeSpan);
+    }
+    
+    const costSpan = document.createElement('span');
+    costSpan.className = 'media-cost';
+    costSpan.textContent = data.cost + ' coins';
+    header.appendChild(costSpan);
+    
+    const mediaContainer = document.createElement('div');
+    mediaContainer.className = 'media-message';
+    
+    if (data.mediaType === 'photo') {
+      const img = document.createElement('img');
+      img.src = data.dataUrl;
+      img.alt = data.fileName;
+      img.style.cursor = 'pointer';
+      img.onclick = () => {
+        const win = window.open();
+        win.document.write(`<img src="${data.dataUrl}" style="max-width:100%;">`);
+      };
+      mediaContainer.appendChild(img);
+    } else {
+      const video = document.createElement('video');
+      video.src = data.dataUrl;
+      video.controls = true;
+      video.style.maxWidth = '200px';
+      video.style.maxHeight = '200px';
+      mediaContainer.appendChild(video);
+    }
+    
+    const infoDiv = document.createElement('div');
+    infoDiv.style.marginTop = '5px';
+    infoDiv.style.fontSize = '0.8rem';
+    infoDiv.style.color = 'rgba(255,255,255,0.6)';
+    infoDiv.textContent = `${data.fileName} (${formatFileSize(data.fileSize)})`;
+    
+    div.appendChild(header);
+    div.appendChild(mediaContainer);
+    div.appendChild(infoDiv);
+    messages.appendChild(div);
+    
+    // Auto scroll
+    setTimeout(() => {
+      messages.scrollTop = messages.scrollHeight;
+    }, 100);
+  }
+
+  // Reaction receive handler
+  document.addEventListener('DOMContentLoaded', () => {
+    if (socket) {
+      socket.on('receive_reaction', (data) => {
+        if (data.roomId !== roomId) return;
+        const el = document.querySelector(`.msg[data-msg-id="${CSS.escape(String(data.messageId))}"]`);
+        if (!el) return;
+        let bubble = el.querySelector('.reaction-bubble');
+        if (!bubble) {
+          bubble = document.createElement('div');
+          bubble.className = 'reaction-bubble';
+          el.appendChild(bubble);
+        }
+        const span = document.createElement('span');
+        span.textContent = data.emoji || '👍';
+        bubble.appendChild(span);
+      });
+    }
+  });
+
+  function formatFileSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  }
+
+  function closeMediaUploadModal() {
+    document.getElementById('mediaUploadModal').style.display = 'none';
+    selectedMediaType = null;
+    selectedMediaFile = null;
+    mediaUploadCost = 0;
+    
+    const previewContainer = document.getElementById('mediaPreviewContainer');
+    previewContainer.style.display = 'none';
+    
+    // Reset file input
+    document.getElementById('mediaFileInput').value = '';
+    document.getElementById('confirmUploadBtn').disabled = true;
+  }
+
+  /* ===== CONTROL FUNCTIONS ===== */
+  async function shareScreen(button) {
+    if (!hasPremiumAccess) {
+      openPaymentModal();
+      return;
+    }
+
+    try {
+      if (isScreenSharing) {
+        const cameraTrack = localStream.getVideoTracks()[0];
+        Object.values(peers).forEach(pc => {
+          const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+          if (sender && cameraTrack) sender.replaceTrack(cameraTrack);
+        });
+        button.innerHTML = '🖥️';
+        button.classList.remove('active');
+        isScreenSharing = false;
+        showNotification('Screen sharing stopped', 'info');
+      } else {
+        const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+        const screenTrack = screenStream.getVideoTracks()[0];
+        screenTrack.onended = () => {
+          if (isScreenSharing) shareScreen(button);
+        };
+        Object.values(peers).forEach(pc => {
+          const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+          if (sender) sender.replaceTrack(screenTrack);
+        });
+        button.innerHTML = '❌';
+        button.classList.add('active');
+        isScreenSharing = true;
+        showNotification('Screen sharing started', 'success');
+      }
+      updateLocalVideoPanel();
+    } catch (err) {
+      console.error('Screen share error:', err);
+      showNotification('Screen share failed: ' + err.message, 'error');
+    }
+  }
+
+  function toggleMic(button) {
+    if (!localStream) return;
+    
+    const audioTrack = localStream.getAudioTracks()[0];
+    if (audioTrack) {
+      audioTrack.enabled = !audioTrack.enabled;
+      button.classList.toggle('off', !audioTrack.enabled);
+      button.innerHTML = audioTrack.enabled ? '🎤' : '🔇';
+      showNotification(audioTrack.enabled ? 'Microphone unmuted' : 'Microphone muted', 'info');
+    }
+  }
+
+  function toggleCam(button) {
+    if (!localStream) return;
+    
+    const videoTrack = localStream.getVideoTracks()[0];
+    if (videoTrack) {
+      videoTrack.enabled = !videoTrack.enabled;
+      button.classList.toggle('off', !videoTrack.enabled);
+      button.innerHTML = videoTrack.enabled ? '📷' : '📹';
+      showNotification(videoTrack.enabled ? 'Camera shown' : 'Camera hidden', 'info');
+      updateLocalVideoPanel();
+    }
+  }
+
+  /* ===== UI UPDATE FUNCTIONS ===== */
+  function updateParticipantCount() {
+    document.getElementById('participantCountText').textContent = participantCount;
+  }
+
+  function handleOnlineCount(data) {
+    const el = document.getElementById('onlineCountText');
+    if (el && data && typeof data.count === 'number') {
+      el.textContent = `(${data.count})`;
+    }
+  }
+
+  function handleSpecialEmoji(data) {
+    if (!data || data.roomId !== roomId) return;
+    const targetUserId = data.toUserId;
+    let targetPanel = null;
+    for (const [panelNum, panelData] of Object.entries(videoPanels)) {
+      if (panelData.userId === targetUserId) {
+        targetPanel = parseInt(panelNum);
+        break;
+      }
+    }
+    if (targetPanel) {
+      showSpecialEmoji(targetPanel, data.emoji || '✨');
+    }
+  }
+  function updateConnectionStatus(status) {
+    const statusEl = document.getElementById('connectionStatus');
+    const dotEl = document.getElementById('statusDot');
+    const textEl = document.getElementById('statusText');
+    
+    if (!statusEl || !dotEl || !textEl) return;
+    
+    statusEl.style.display = 'flex';
+    
+    switch(status) {
+      case 'connected':
+        dotEl.className = 'status-dot status-connected';
+        textEl.textContent = 'Connected';
+        statusEl.style.borderColor = 'var(--green)';
+        break;
+      case 'connecting':
+        dotEl.className = 'status-dot status-connecting';
+        textEl.textContent = 'Connecting...';
+        statusEl.style.borderColor = 'var(--orange)';
+        break;
+      case 'disconnected':
+        dotEl.className = 'status-dot status-disconnected';
+        textEl.textContent = 'Disconnected';
+        statusEl.style.borderColor = 'var(--danger)';
+        break;
+    }
+  }
+
+  function copyInvite() {
+    const inviteUrl = roomId ? 
+      `${window.location.origin}${window.location.pathname}?room=${roomId}&mode=${inviteMode}` :
+      `${window.location.origin}${window.location.pathname}`;
+    
+    navigator.clipboard.writeText(inviteUrl)
+      .then(() => showNotification('Invite link copied!', 'success'))
+      .catch(() => {
+        // Fallback
+        const textArea = document.createElement('textarea');
+        textArea.value = inviteUrl;
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+          document.execCommand('copy');
+          showNotification('Invite link copied!', 'success');
+        } catch (err) {
+          showNotification('Failed to copy invite link', 'error');
+        }
+        document.body.removeChild(textArea);
+      });
+  }
+
+  function showCoinAnimation(amount) {
+    const coinDisplay = document.querySelector('.coin-display');
+    if (!coinDisplay) return;
+    
+    const rect = coinDisplay.getBoundingClientRect();
+    const startX = window.innerWidth / 2;
+    const startY = window.innerHeight / 2;
+    const endX = rect.left + rect.width / 2;
+    const endY = rect.top + rect.height / 2;
+    
+    for (let i = 0; i < Math.min(amount, 10); i++) {
+      setTimeout(() => {
+        const coin = document.createElement('div');
+        coin.className = 'coin-animation';
+        coin.textContent = '🪙';
+        coin.style.position = 'fixed';
+        coin.style.left = startX + 'px';
+        coin.style.top = startY + 'px';
+        coin.style.zIndex = '9999';
+        coin.style.fontSize = '1.5rem';
+        coin.style.setProperty('--tx', `${endX - startX}px`);
+        coin.style.setProperty('--ty', `${endY - startY}px`);
+        
+        document.body.appendChild(coin);
+        
+        setTimeout(() => coin.remove(), 1000);
+      }, i * 50);
+    }
+  }
+
+  function goBack() {
+    console.log('Going back...');
+    
+    // Leave room
+    if (socket && roomId) {
+      socket.emit('leave-group', { roomId, userId });
+      socket.disconnect();
+    }
+    
+    // Close all peer connections
+    Object.values(peers).forEach(pc => {
+      if (pc && typeof pc.close === 'function') {
+        try {
+          pc.close();
+        } catch (e) {
+          console.error('Error closing peer connection:', e);
+        }
+      }
+    });
+    
+    // Clear peers
+    for (const id in peers) delete peers[id];
+    
+    // Clear user data
+    userData.clear();
+    
+    // Stop media streams
+    if (localStream) {
+      localStream.getTracks().forEach(track => track.stop());
+      localStream = null;
+    }
+    
+    // Stop active speaker detection
+    if (speakerInterval) {
+      clearInterval(speakerInterval);
+      speakerInterval = null;
+    }
+    
+    // Stop recording if active
+    if (isRecording) {
+      stopRecording();
+    }
+    
+    // Reset video panels
+    for (let i = 1; i <= 4; i++) {
+      videoPanels[i].userId = null;
+      videoPanels[i].peerId = null;
+      videoPanels[i].nickname = i == 1 ? 'You' : 'Anonymous';
+      videoPanels[i].coins = 0;
+      videoPanels[i].badge = null;
+      videoPanels[i].stream = null;
+      if (videoPanels[i].videoElement) {
+        videoPanels[i].videoElement.remove();
+        videoPanels[i].videoElement = null;
+      }
+      updateVideoPanel(i);
+    }
+    
+    // Reset UI
+    document.getElementById('textChat').style.display = 'none';
+    document.getElementById('videoChat').style.display = 'none';
+    document.getElementById('globalControls').style.display = 'none';
+    const ab = document.getElementById('adminBtn'); if (ab) ab.style.display = 'none';
+    document.getElementById('recordBtn').style.display = 'none';
+    document.getElementById('headerCoinDisplay').style.display = 'none';
+    isTextMode = false;
+    isVideoMode = false;
+    roomId = null;
+    participantCount = 0;
+    updateParticipantCount();
+    updateConnectionStatus('disconnected');
+    
+    // Clear chat messages
+    document.getElementById('messages').innerHTML = '';
+    
+    // Hide invite link display
+    document.getElementById('inviteLinkDisplay').style.display = 'none';
+    
+    // Show start overlay
+    document.getElementById('startOverlay').style.display = 'flex';
+    document.getElementById('appContainer').style.display = 'none';
+    
+    showNotification('Left the group chat', 'info');
+  }
+
+  function goHome() {
+    window.location.href = "index.html";
+  }
+
+  function showNotification(message, type = 'info') {
+    // Remove existing notifications
+    document.querySelectorAll('.copy-notification').forEach(el => el.remove());
+    
+    const notification = document.createElement('div');
+    notification.className = 'copy-notification';
+    notification.textContent = message;
+    
+    switch (type) {
+      case 'error':
+        notification.style.borderColor = 'var(--danger)';
+        notification.style.background = 'rgba(255, 118, 117, 0.2)';
+        break;
+      case 'success':
+        notification.style.borderColor = 'var(--green)';
+        notification.style.background = 'rgba(0, 209, 154, 0.2)';
+        break;
+      case 'warning':
+        notification.style.borderColor = 'var(--orange)';
+        notification.style.background = 'rgba(255, 159, 67, 0.2)';
+        break;
+      default:
+        notification.style.borderColor = 'var(--accent)';
+        notification.style.background = 'rgba(0, 198, 255, 0.2)';
+    }
+    
+    document.body.appendChild(notification);
+    
+    // Auto-remove after 3 seconds
+    setTimeout(() => {
+      notification.style.opacity = '0';
+      notification.style.transform = 'translateX(-50%) translateY(-20px)';
+      setTimeout(() => notification.remove(), 300);
+    }, 3000);
+  }
+
+  /* ===== UTILITY FUNCTIONS ===== */
+  function createCSSParticles() {
+    const container = document.getElementById('threeContainer');
+    if (!container) return;
+    
+    container.innerHTML = '';
+    for (let i = 0; i < 15; i++) {
+      const particle = document.createElement('div');
+      particle.className = 'animation-particle';
+      particle.style.width = Math.random() * 20 + 5 + 'px';
+      particle.style.height = particle.style.width;
+      particle.style.left = Math.random() * 100 + 'vw';
+      particle.style.top = Math.random() * 100 + 'vh';
+      particle.style.animationDuration = Math.random() * 20 + 10 + 's';
+      particle.style.animationDelay = Math.random() * 5 + 's';
+      container.appendChild(particle);
+    }
+  }
+
+  function setupMobileHandlers() {
+    // Prevent double-tap zoom
+    document.addEventListener('dblclick', function(e) {
+      if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
+        e.preventDefault();
+      }
+    });
+    
+    // Handle iOS viewport height issues
+    function setVH() {
+      let vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty('--vh', `${vh}px`);
+    }
+    
+    setVH();
+    window.addEventListener('resize', setVH);
+    window.addEventListener('orientationchange', setVH);
+    
+    // Fix iOS input zoom
+    document.addEventListener('touchstart', function(e) {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+        // iOS will zoom automatically, we just ensure it's not prevented
+      }
+    });
+  }
+
+  /* ===== EVENT LISTENERS ===== */
+  function setupEventListeners() {
+    // Button event listeners
+    document.getElementById('startTextBtn').addEventListener('click', function() {
+      // Show nickname modal when text chat is selected
+      document.getElementById('nicknameModal').style.display = 'flex';
+      document.getElementById('nicknameInputModal').focus();
+    });
+    
+    document.getElementById('startVideoBtn').addEventListener('click', startVideoMode);
+    document.getElementById('homeBtn').addEventListener('click', goHome);
+    const headerHomeBtn = document.getElementById('headerHomeBtn');
+    if (headerHomeBtn) headerHomeBtn.addEventListener('click', goHome);
+    document.getElementById('sendMessageBtn').addEventListener('click', sendMessage);
+    document.getElementById('copyInviteBtn').addEventListener('click', copyInvite);
+    document.getElementById('backBtn').addEventListener('click', goBack);
+    document.getElementById('mediaUploadBtn').addEventListener('click', showMediaTypeModal);
+    
+    // Nickname modal
+    document.getElementById('confirmNicknameBtn').addEventListener('click', function() {
+      const nicknameInput = document.getElementById('nicknameInputModal').value.trim();
+      if (!nicknameInput) {
+        showNotification('Please enter a nickname', 'error');
+        return;
+      }
+      
+      if (nicknameInput.length < 3 || nicknameInput.length > 20) {
+        showNotification('Nickname must be 3-20 characters', 'error');
+        return;
+      }
+      
+      nickname = nicknameInput;
+      localStorage.setItem('userNickname', nickname);
+      document.getElementById('nicknameModal').style.display = 'none';
+      startTextMode();
+    });
+    
+    document.getElementById('cancelNicknameBtn').addEventListener('click', function() {
+      document.getElementById('nicknameModal').style.display = 'none';
+    });
+    
+    document.getElementById('nicknameInputModal').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        document.getElementById('confirmNicknameBtn').click();
+      }
+    });
+    
+    // Media type selection
+    document.querySelectorAll('.media-type-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        selectMediaType(this.dataset.type);
+      });
+    });
+    
+    document.getElementById('proceedMediaBtn').addEventListener('click', proceedToMediaUpload);
+    document.getElementById('cancelMediaBtn').addEventListener('click', () => {
+      document.getElementById('mediaTypeModal').style.display = 'none';
+    });
+    
+    // Media upload
+    document.getElementById('browseMediaBtn').addEventListener('click', browseMediaFiles);
+    document.getElementById('mediaFileInput').addEventListener('change', handleMediaFileSelect);
+    document.getElementById('confirmUploadBtn').addEventListener('click', confirmMediaUpload);
+    document.getElementById('cancelUploadBtn').addEventListener('click', closeMediaUploadModal);
+    
+    // Report system
+    document.querySelectorAll('.report-option').forEach(opt => {
+      opt.addEventListener('click', function() {
+        document.querySelectorAll('.report-option').forEach(o => o.classList.remove('selected'));
+        this.classList.add('selected');
+        selectedReportReason = this.dataset.reason;
+      });
+    });
+    
+    document.getElementById('submitReportBtn').addEventListener('click', submitReport);
+    document.getElementById('cancelReportBtn').addEventListener('click', closeReportModal);
+    
+    // Payment gateway
+    document.querySelectorAll('.payment-option').forEach(opt => {
+      opt.addEventListener('click', function() {
+        selectPaymentOption(this);
+      });
+    });
+    
+    document.getElementById('confirmPaymentBtn').addEventListener('click', confirmPayment);
+    document.getElementById('cancelPaymentBtn').addEventListener('click', closePaymentModal);
+    
+    // Recording button
+    document.getElementById('recordBtn').addEventListener('click', toggleRecording);
+    
+  // Admin system removed; moved to admin dashboard
+    
+    // Video panel click handlers
+    for (let i = 1; i <= 4; i++) {
+      document.getElementById(`video-panel-${i}`).addEventListener('click', function() {
+        handleVideoPanelClick(i);
+      });
+    }
+    
+    // Message input
+    const msgInput = document.getElementById('msgInput');
+    if (msgInput) {
+      msgInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          sendMessage();
+        }
+      });
+      let typingTimeout;
+      msgInput.addEventListener('input', () => {
+        if (!socket || !roomId) return;
+        socket.emit('typing', { roomId, isTyping: true });
+        clearTimeout(typingTimeout);
+        typingTimeout = setTimeout(() => {
+          socket.emit('typing', { roomId, isTyping: false });
+        }, 1000);
+      });
+    }
+    
+    // Video controls delegation
+    const globalControls = document.getElementById('globalControls');
+    if (globalControls) {
+      globalControls.addEventListener('click', (e) => {
+        const button = e.target.closest('[data-action]');
+        if (button) {
+          const action = button.dataset.action;
+          switch (action) {
+            case 'toggleMic':
+              toggleMic(button);
+              break;
+            case 'toggleCam':
+              toggleCam(button);
+              break;
+            case 'shareScreen':
+              if (premiumScreenshareEnabledFlag || hasPremiumAccess) {
+                shareScreen(button);
+              } else {
+                showNotification('Screenshare disabled by admin', 'warning');
+              }
+              break;
+          }
+        }
+      });
+    }
+    
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && (isTextMode || isVideoMode)) {
+        goBack();
+      }
+      
+      if (e.key === 'Enter' && isTextMode && !e.shiftKey && document.activeElement.id === 'msgInput') {
+        e.preventDefault();
+        sendMessage();
+      }
+      
+      if (isVideoMode && !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
+        switch(e.key.toLowerCase()) {
+          case 'm':
+            const micBtn = document.querySelector('[data-action="toggleMic"]');
+            if (micBtn) toggleMic(micBtn);
+            break;
+          case 'c':
+            const camBtn = document.querySelector('[data-action="toggleCam"]');
+            if (camBtn) toggleCam(camBtn);
+            break;
+          case 'r':
+            if (isRecordingEnabled) {
+              toggleRecording();
+            }
+            break;
+        }
+      }
+    });
+    
+    // Modal clicks
+    document.addEventListener('click', (e) => {
+      if (e.target.classList.contains('modal')) {
+        e.target.style.display = 'none';
+      }
+    });
+    
+    // Before unload
+    window.addEventListener('beforeunload', (e) => {
+      if (socket && roomId) {
+        socket.emit('leave-group', { roomId, userId });
+      }
+      
+      // Stop recording if active
+      if (isRecording) {
+        stopRecording();
+      }
+      
+      return null;
+    });
+    
+    // Page visibility
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden && isVideoMode) {
+        document.querySelectorAll('video').forEach(video => {
+          if (!video.paused) video.pause();
+        });
+      } else if (isVideoMode) {
+        document.querySelectorAll('video').forEach(video => {
+          if (video.paused && video.srcObject) {
+            video.play().catch(e => console.log('Video play error:', e));
+          }
+        });
+      }
+    });
+  }
+</script>
+</body>
+</html>
